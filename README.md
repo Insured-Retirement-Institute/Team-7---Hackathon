@@ -1,4 +1,4 @@
-# Define repoistory name
+# Define repository name
 
 Define description.
 
