@@ -1,6 +1,4 @@
-# Define repository name
-
-Team TLDR Annuities
+# Team TLDR Annuities
 
 ## Get started
 
