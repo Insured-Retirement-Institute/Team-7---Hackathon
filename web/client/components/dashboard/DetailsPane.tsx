@@ -16,11 +16,17 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
   return (
     <aside
       className={cn(
-        "fixed right-0 top-0 h-full bg-white border-l z-30 transition-all duration-300 shadow-2xl flex flex-col",
-        isOpen ? "w-[360px]" : "w-0 overflow-hidden border-none"
+        "fixed inset-0 z-30 transition-opacity duration-200",
+        isOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
       )}
+      aria-hidden={!isOpen}
     >
-      <div className="flex items-center justify-between p-4 border-b">
+      {/* Backdrop to dim main content */}
+      <div className="absolute left-0 right-0 top-14 bottom-0 bg-black/30" onClick={onClose} />
+
+      {/* Content starts below header (h-14) and spans full width */}
+      <div className="absolute left-0 right-0 top-14 bottom-0 bg-white shadow-2xl border-t border-gray-200 flex flex-col">
+        <div className="flex items-center justify-between p-4 border-b">
         <h2 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Details</h2>
         <button 
           onClick={onClose}
@@ -28,9 +34,9 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
         >
           <X size={16} className="text-gray-400" />
         </button>
-      </div>
+        </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4 space-y-6">
         {/* Title and date */}
         <div className="border-b pb-4">
           <h3 className="text-sm font-bold text-primary mb-1">{policy.name}</h3>
@@ -154,13 +160,14 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
         </Accordion.Root>
       </div>
 
-      <div className="p-4 bg-gray-50 border-t flex justify-end">
+        <div className="p-4 bg-gray-50 border-t flex justify-end">
         <button 
           onClick={onClose}
           className="px-4 py-1.5 bg-blue-600 text-white text-[11px] font-bold rounded hover:bg-blue-700 transition-colors"
         >
           Close
         </button>
+        </div>
       </div>
     </aside>
   );

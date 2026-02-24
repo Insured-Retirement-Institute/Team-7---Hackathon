@@ -16,7 +16,7 @@ export default function Index() {
 
   return (
     <DashboardLayout>
-        <main className="flex-1 overflow-y-auto p-6 transition-all duration-300">
+        <main className="flex-1 overflow-y-auto p-6 transition-all duration-300 min-h-0">
           <div className="max-w-[1200px] mx-auto">
             <div className="flex items-center justify-between mb-6">
               <h1 className="text-xl font-bold text-gray-800 tracking-tight">Insurance</h1>
