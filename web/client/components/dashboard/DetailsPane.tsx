@@ -8,6 +8,7 @@ import { PostActivationTab } from "@/components/dashboard/tabs/PostActivationTab
 import { TaxImplicationsTab } from "@/components/dashboard/tabs/TaxImplicationsTab";
 import { WatchItemsTab } from "@/components/dashboard/tabs/WatchItemsTab";
 import { FullViewTab } from "@/components/dashboard/tabs/FullViewTab";
+import { AnnuityBenefitsTab } from "@/components/dashboard/tabs/AnnuityBenefitsTab";
 
 interface Props {
   policy: InsurancePolicy | null;
@@ -18,7 +19,7 @@ interface Props {
 export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
   if (!policy) return null;
 
-  const tabs = ["Chart", "Income Table", "Post Activation", "Tax Implications", "Watch Items", "Full View"] as const;
+  const tabs = ["Chart", "Income Table", "Post Activation", "Tax Implications", "Watch Items", "Full View", "Annuity Benefits"] as const;
   type Tab = (typeof tabs)[number];
   const [activeTab, setActiveTab] = useState<Tab>("Chart");
 
@@ -35,17 +36,20 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
 
       {/* Content starts below header (h-14) and spans full width */}
       <div className="absolute left-0 right-0 top-14 bottom-0 bg-white shadow-2xl border-t border-gray-200 flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b">
-        <h2 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Details</h2>
-        <button 
-          onClick={onClose}
-          className="p-1 hover:bg-gray-100 rounded-full transition-colors"
-        >
-          <X size={16} className="text-gray-400" />
-        </button>
+        <div className="border-b p-4">
+          <div className="max-w-[1200px] mx-auto flex items-center justify-between">
+            <h2 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Details</h2>
+            <button
+              onClick={onClose}
+              className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X size={16} className="text-gray-400" />
+            </button>
+          </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4">
+        <div className="max-w-[1200px] mx-auto space-y-6">
         {/* Title and date */}
         <div className="border-b pb-4">
           <h3 className="text-sm font-bold text-primary mb-1">{policy.name}</h3>
@@ -68,14 +72,15 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
         </div>
 
         <div className="border-b pb-2">
-          <div className="flex gap-2 text-[11px] font-semibold text-gray-600">
-            {tabs.map((tab) => (
+          <div className="inline-flex text-[11px] font-semibold text-gray-600 border border-gray-200">
+            {tabs.map((tab, i) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={cn(
-                  "px-3 py-1 rounded-full transition-colors",
-                  activeTab === tab ? "bg-blue-600 text-white" : "bg-gray-100 hover:bg-gray-200"
+                  "px-3 py-1.5 transition-colors whitespace-nowrap",
+                  i > 0 && "border-l border-gray-200",
+                  activeTab === tab ? "bg-blue-600 text-white border-blue-600" : "bg-white hover:bg-gray-50"
                 )}
               >
                 {tab}
@@ -85,6 +90,7 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
         </div>
 
         <TabContent activeTab={activeTab} policy={policy} />
+        </div>
       </div>
 
         <div className="p-4 bg-gray-50 border-t flex justify-end">
@@ -114,6 +120,8 @@ const TabContent: React.FC<{ activeTab: string; policy: InsurancePolicy }> = ({ 
       return <TaxImplicationsTab policy={policy} />;
     case "Watch Items":
       return <WatchItemsTab />;
+    case "Annuity Benefits":
+      return <AnnuityBenefitsTab />;
     case "Full View":
     default:
       return <FullViewTab policy={policy} />;

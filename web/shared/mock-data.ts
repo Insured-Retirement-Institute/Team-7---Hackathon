@@ -1,5 +1,7 @@
 export interface InsurancePolicy {
   id: string;
+  cusip: string;
+  policyDate: string;
   name: string;
   asOfDate: string;
   issueEffective: string;
@@ -15,6 +17,12 @@ export interface InsurancePolicy {
   netDeathBenefit: string;
   maturityDate?: string;
   receivedDate?: string;
+  benefits?: {
+    growth: boolean;
+    principalProtection: boolean;
+    income: boolean;
+    deathBenefit: boolean;
+  };
   contractDetails?: {
     totalContractAmount: string;
     netDeathBenefit: string;
@@ -43,8 +51,47 @@ export interface PolicyProjectionPoint {
 }
 
 export const policies: InsurancePolicy[] = [
+    {
+    id: "7",
+    cusip: "001399864",
+    policyDate: "11/01/2022",
+    name: "Polaris Platinum III",
+    asOfDate: "11/1/2022",
+    issueEffective: "11/1/2019",
+    valuationDate: "11/1/2022",
+    value: "$211,664",
+    contractNumber: "PPL001399864",
+    issuer: "American General Life Insurance Co.",
+    productType: "Variable Annuity",
+    totalPremium: "$180,000",
+    totalWithdrawal: "$0",
+    surrenderValue: "$200,780",
+    costBasis: "$100,000",
+    netDeathBenefit: "$220,508",
+    maturityDate: "11/1/2054",
+    receivedDate: "10/15/2019",
+    benefits: { growth: true, principalProtection: false, income: true, deathBenefit: true },
+    contractDetails: {
+      totalContractAmount: "$211,664",
+      netDeathBenefit: "$220,508",
+      grossDeathBenefit: "$220,508",
+      originalInvestmentValue: "$180,000",
+      surrenderValue: "$200,780",
+      totalPremium: "$180,000",
+      totalWithdrawal: "$0",
+      preTEFRA_Cost: "$0",
+      postTEFRA_Cost: "$100,000",
+      yearEndValue: "$205,320",
+      costBasis: "$100,000",
+      projectedPaymentAmount: "$1,121",
+      projectedPaymentAmountAnnual: "$13,451",
+      guaranteedProjectedAmount: "$13,451",
+    },
+  },
   {
     id: "1",
+    cusip: "",
+    policyDate: "",
     name: "Allianz Index Advantage®",
     asOfDate: "12/31/2023",
     issueEffective: "--",
@@ -58,9 +105,12 @@ export const policies: InsurancePolicy[] = [
     surrenderValue: "$629,308",
     costBasis: "$0",
     netDeathBenefit: "$682,976",
+    benefits: { growth: true, principalProtection: true, income: false, deathBenefit: true },
   },
   {
     id: "2",
+    cusip: "",
+    policyDate: "",
     name: "American Equity Income Shield - 10 Year",
     asOfDate: "12/31/2023",
     issueEffective: "4/5/2022",
@@ -74,9 +124,12 @@ export const policies: InsurancePolicy[] = [
     surrenderValue: "$59,285",
     costBasis: "$0",
     netDeathBenefit: "$62,576",
+    benefits: { growth: false, principalProtection: true, income: true, deathBenefit: true },
   },
   {
     id: "3",
+    cusip: "",
+    policyDate: "",
     name: "American Legacy Design 3, Lifetime Income Advantage",
     asOfDate: "12/31/2023",
     issueEffective: "--",
@@ -90,9 +143,12 @@ export const policies: InsurancePolicy[] = [
     surrenderValue: "--",
     costBasis: "--",
     netDeathBenefit: "--",
+    benefits: { growth: true, principalProtection: true, income: true, deathBenefit: true },
   },
   {
     id: "4",
+    cusip: "",
+    policyDate: "",
     name: "Fixed Annuity",
     asOfDate: "12/31/2023",
     issueEffective: "4/8/2002",
@@ -106,9 +162,12 @@ export const policies: InsurancePolicy[] = [
     surrenderValue: "$7,909",
     costBasis: "$0",
     netDeathBenefit: "$7,909",
+    benefits: { growth: false, principalProtection: true, income: true, deathBenefit: true },
   },
   {
     id: "5",
+    cusip: "",
+    policyDate: "",
     name: "Security Benefit Indexed Life Annuity",
     asOfDate: "12/31/2023",
     issueEffective: "6/7/2021",
@@ -124,6 +183,7 @@ export const policies: InsurancePolicy[] = [
     netDeathBenefit: "$0",
     maturityDate: "6/7/2051",
     receivedDate: "5/24/2021",
+    benefits: { growth: true, principalProtection: false, income: true, deathBenefit: false },
     contractDetails: {
       totalContractAmount: "$118,264",
       netDeathBenefit: "$0",
@@ -143,6 +203,8 @@ export const policies: InsurancePolicy[] = [
   },
   {
     id: "6",
+    cusip: "",
+    policyDate: "",
     name: "Variable Annuity",
     asOfDate: "12/31/2023",
     issueEffective: "5/19/2010",
@@ -156,6 +218,7 @@ export const policies: InsurancePolicy[] = [
     surrenderValue: "$2,447",
     costBasis: "$0",
     netDeathBenefit: "$2,477",
+    benefits: { growth: true, principalProtection: false, income: false, deathBenefit: true },
   },
 ];
 
