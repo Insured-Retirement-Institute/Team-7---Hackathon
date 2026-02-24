@@ -6,6 +6,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "build-web": "cd web && npm run build && cd ..",
     "watch": "tsc -w",
     "test": "jest",
     "cdk": "cdk",
@@ -13,9 +14,9 @@
     "destroy": "cdk destroy",
     "deployBranch": "powershell cdk deploy --context stackId=$(git rev-parse --abbrev-ref HEAD)",
     "destroyBranch": "powershell cdk destroy --context stackId=$(git rev-parse --abbrev-ref HEAD)",
-    "buildDeployBranch": "npm run build && npm run deployBranch",
+    "buildDeployBranch": "npm run build && npm run build-web && npm run deployBranch",
     "bdb": "npm run buildDeployBranch",
-    "open": "powershell start \"https://s3.us-east-1.amazonaws.com/team7-$($(git rev-parse --abbrev-ref HEAD).toLower())-website/index.html\"",
+    "open": "powershell start \"http://team7-$($(git rev-parse --abbrev-ref HEAD).toLower())-website.s3-website-us-east-1.amazonaws.com/\"",
     "buildDeployBranchandOpen": "npm run bdb && npm run open",
     "bdbo": "npm run buildDeployBranchandOpen"
   },

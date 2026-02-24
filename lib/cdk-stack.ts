@@ -24,7 +24,7 @@ export class AwsWebStack extends cdk.Stack {
     });
 
     const pageDeploy = new aws_s3_deployment.BucketDeployment(this, "deployWebContent", {
-      sources: [aws_s3_deployment.Source.asset('./src')],
+      sources: [aws_s3_deployment.Source.asset('./web/dist/spa')],
       destinationBucket: bucket
     });
 
