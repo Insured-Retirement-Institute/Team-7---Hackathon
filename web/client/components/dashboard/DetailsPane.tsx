@@ -1,8 +1,13 @@
-import React from "react";
-import { X, ChevronDown, ChevronUp } from "lucide-react";
+import React, { useState } from "react";
+import { X } from "lucide-react";
 import { InsurancePolicy } from "@shared/mock-data";
 import { cn } from "@/lib/utils";
-import * as Accordion from "@radix-ui/react-accordion";
+import { ChartTab } from "@/components/dashboard/tabs/ChartTab";
+import { IncomeTableTab } from "@/components/dashboard/tabs/IncomeTableTab";
+import { PostActivationTab } from "@/components/dashboard/tabs/PostActivationTab";
+import { TaxImplicationsTab } from "@/components/dashboard/tabs/TaxImplicationsTab";
+import { WatchItemsTab } from "@/components/dashboard/tabs/WatchItemsTab";
+import { FullViewTab } from "@/components/dashboard/tabs/FullViewTab";
 
 interface Props {
   policy: InsurancePolicy | null;
@@ -12,6 +17,10 @@ interface Props {
 
 export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
   if (!policy) return null;
+
+  const tabs = ["Chart", "Income Table", "Post Activation", "Tax Implications", "Watch Items", "Full View"] as const;
+  type Tab = (typeof tabs)[number];
+  const [activeTab, setActiveTab] = useState<Tab>(tabs[0]);
 
   return (
     <aside
@@ -26,17 +35,20 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
 
       {/* Content starts below header (h-14) and spans full width */}
       <div className="absolute left-0 right-0 top-14 bottom-0 bg-white shadow-2xl border-t border-gray-200 flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b">
-        <h2 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Details</h2>
-        <button 
-          onClick={onClose}
-          className="p-1 hover:bg-gray-100 rounded-full transition-colors"
-        >
-          <X size={16} className="text-gray-400" />
-        </button>
+        <div className="border-b p-4">
+          <div className="max-w-[1200px] mx-auto flex items-center justify-between">
+            <h2 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Details</h2>
+            <button
+              onClick={onClose}
+              className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X size={16} className="text-gray-400" />
+            </button>
+          </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4">
+        <div className="max-w-[1200px] mx-auto space-y-6">
         {/* Title and date */}
         <div className="border-b pb-4">
           <h3 className="text-sm font-bold text-primary mb-1">{policy.name}</h3>
@@ -58,106 +70,26 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
           </div>
         </div>
 
-        {/* Accordion Sections */}
-        <Accordion.Root type="multiple" defaultValue={["main-info", "contract-dates", "contract-details"]} className="space-y-4">
-          
-          <Accordion.Item value="main-info" className="border rounded">
-            <Accordion.Header className="flex">
-              <Accordion.Trigger className="flex flex-1 items-center justify-between p-3 text-xs font-bold text-gray-700 hover:bg-gray-50 uppercase tracking-wider text-left group">
-                Main Information
-                <ChevronDown size={14} className="text-gray-400 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-              </Accordion.Trigger>
-            </Accordion.Header>
-            <Accordion.Content className="p-3 bg-white text-[11px] space-y-2 border-t overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
-              <div className="flex justify-between">
-                <span className="text-gray-400">Contract Number:</span>
-                <span className="text-gray-700 font-medium">{policy.contractNumber}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Issuer:</span>
-                <span className="text-gray-700 font-medium">{policy.issuer}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Product Type:</span>
-                <span className="text-gray-700 font-medium">{policy.productType}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Total Premium:</span>
-                <span className="text-gray-700 font-medium">{policy.totalPremium}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Total Withdrawal:</span>
-                <span className="text-gray-700 font-medium">{policy.totalWithdrawal}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Surrender Value:</span>
-                <span className="text-gray-700 font-medium">{policy.surrenderValue}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Cost Basis:</span>
-                <span className="text-gray-700 font-medium">{policy.costBasis}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Net Death Benefit:</span>
-                <span className="text-gray-700 font-medium">{policy.netDeathBenefit}</span>
-              </div>
-            </Accordion.Content>
-          </Accordion.Item>
+        <div className="border-b pb-2">
+          <div className="inline-flex text-[11px] font-semibold text-gray-600 border border-gray-200">
+            {tabs.map((tab, i) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={cn(
+                  "px-3 py-1.5 transition-colors whitespace-nowrap",
+                  i > 0 && "border-l border-gray-200",
+                  activeTab === tab ? "bg-blue-600 text-white border-blue-600" : "bg-white hover:bg-gray-50"
+                )}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        </div>
 
-          <Accordion.Item value="contract-dates" className="border rounded">
-            <Accordion.Header className="flex">
-              <Accordion.Trigger className="flex flex-1 items-center justify-between p-3 text-xs font-bold text-gray-700 hover:bg-gray-50 uppercase tracking-wider text-left group">
-                Contract Dates
-                <ChevronDown size={14} className="text-gray-400 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-              </Accordion.Trigger>
-            </Accordion.Header>
-            <Accordion.Content className="p-3 bg-white text-[11px] space-y-2 border-t overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
-               <div className="flex justify-between">
-                <span className="text-gray-400">Maturity:</span>
-                <span className="text-gray-700 font-medium">{policy.maturityDate || "--"}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Issue Effective:</span>
-                <span className="text-gray-700 font-medium">{policy.issueEffective}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Received:</span>
-                <span className="text-gray-700 font-medium">{policy.receivedDate || "--"}</span>
-              </div>
-            </Accordion.Content>
-          </Accordion.Item>
-
-          <Accordion.Item value="contract-details" className="border rounded">
-            <Accordion.Header className="flex">
-              <Accordion.Trigger className="flex flex-1 items-center justify-between p-3 text-xs font-bold text-gray-700 hover:bg-gray-50 uppercase tracking-wider text-left group">
-                Contract Details
-                <ChevronDown size={14} className="text-gray-400 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-              </Accordion.Trigger>
-            </Accordion.Header>
-            <Accordion.Content className="p-3 bg-white text-[11px] space-y-2 border-t overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
-              {policy.contractDetails ? Object.entries(policy.contractDetails).map(([key, value]) => (
-                <div key={key} className="flex justify-between">
-                  <span className="text-gray-400 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}:</span>
-                  <span className="text-gray-700 font-medium">{value}</span>
-                </div>
-              )) : (
-                <p className="text-gray-400 text-center">No additional details available</p>
-              )}
-            </Accordion.Content>
-          </Accordion.Item>
-
-          <Accordion.Item value="service-features" className="border rounded">
-            <Accordion.Header className="flex">
-              <Accordion.Trigger className="flex flex-1 items-center justify-between p-3 text-xs font-bold text-gray-700 hover:bg-gray-50 uppercase tracking-wider text-left group">
-                Service Features
-                <ChevronDown size={14} className="text-gray-400 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-              </Accordion.Trigger>
-            </Accordion.Header>
-            <Accordion.Content className="p-3 bg-white text-[11px] space-y-2 border-t overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
-              <p className="text-gray-400 italic">Service Feature 1 Sub Type</p>
-            </Accordion.Content>
-          </Accordion.Item>
-        </Accordion.Root>
+        <TabContent activeTab={activeTab} policy={policy} />
+        </div>
       </div>
 
         <div className="p-4 bg-gray-50 border-t flex justify-end">
@@ -172,3 +104,24 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
     </aside>
   );
 };
+
+// ---------- Tab Content Components ----------
+
+const TabContent: React.FC<{ activeTab: string; policy: InsurancePolicy }> = ({ activeTab, policy }) => {
+  switch (activeTab) {
+    case "Chart":
+      return <ChartTab policy={policy} />;
+    case "Income Table":
+      return <IncomeTableTab policy={policy} />;
+    case "Post Activation":
+      return <PostActivationTab policy={policy} />;
+    case "Tax Implications":
+      return <TaxImplicationsTab policy={policy} />;
+    case "Watch Items":
+      return <WatchItemsTab />;
+    case "Full View":
+    default:
+      return <FullViewTab policy={policy} />;
+  }
+};
+
