@@ -9,7 +9,14 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
     fs: {
-      allow: [".", "./client", "./shared"],
+      // Explicit absolute paths avoid Windows path resolution edge cases that can 403 static assets
+      allow: [
+        path.resolve(__dirname),
+        path.resolve(__dirname, "client"),
+        path.resolve(__dirname, "shared"),
+        path.resolve(__dirname, "public"),
+        path.resolve(__dirname, "dist", "spa"),
+      ],
       deny: [".env", ".env.*", "*.{crt,pem}", "**/.git/**", "server/**"],
     },
   },
