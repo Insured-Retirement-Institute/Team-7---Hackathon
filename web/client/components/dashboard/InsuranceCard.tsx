@@ -7,9 +7,10 @@ interface Props {
   policy: InsurancePolicy;
   isSelected: boolean;
   onSelect: (policy: InsurancePolicy) => void;
+  onViewDetails?: (policy: InsurancePolicy) => void;
 }
 
-export const InsuranceCard: React.FC<Props> = ({ policy, isSelected, onSelect }) => {
+export const InsuranceCard: React.FC<Props> = ({ policy, isSelected, onSelect, onViewDetails }) => {
   return (
     <div 
       className={cn(
@@ -87,6 +88,7 @@ export const InsuranceCard: React.FC<Props> = ({ policy, isSelected, onSelect })
            onClick={(e) => {
              e.stopPropagation();
              onSelect(policy);
+             onViewDetails?.(policy);
            }}
         >
           View Detail
