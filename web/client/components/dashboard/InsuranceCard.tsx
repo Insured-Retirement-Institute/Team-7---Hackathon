@@ -23,7 +23,7 @@ export const InsuranceCard: React.FC<Props> = ({ policy, isSelected, onSelect, o
         {/* Card Header */}
         <div className="flex justify-between items-start mb-4">
           <div className="flex-1">
-            <h3 className="text-sm font-bold text-gray-800 leading-tight mb-0.5 min-h-[2.5em] line-clamp-2">{policy.name}</h3>
+            <h3 className="text-sm font-bold text-gray-800 leading-tight mb-0.5">{policy.name}</h3>
             <span className="text-[10px] text-gray-400">As of {policy.asOfDate}</span>
           </div>
           <ExternalLink size={14} className="text-blue-500 opacity-60 flex-shrink-0" />
