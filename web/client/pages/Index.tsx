@@ -5,11 +5,17 @@ import { DetailsPane } from "@/components/dashboard/DetailsPane";
 import { policies, InsurancePolicy } from "@shared/mock-data";
 
 export default function Index() {
-  // Select Allianz Index Advantage as default
-  const [selectedPolicy, setSelectedPolicy] = useState<InsurancePolicy | null>(policies[0]);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(true);
+  // Start with nothing selected; user chooses a card
+  const [selectedPolicy, setSelectedPolicy] = useState<InsurancePolicy | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   const handleSelectPolicy = (policy: InsurancePolicy) => {
+    setSelectedPolicy(policy);
+    // Only highlight the card; don't auto-open details
+    setIsDetailsOpen(false);
+  };
+
+  const handleViewDetails = (policy: InsurancePolicy) => {
     setSelectedPolicy(policy);
     setIsDetailsOpen(true);
   };
@@ -29,6 +35,7 @@ export default function Index() {
                   policy={policy}
                   isSelected={selectedPolicy?.id === policy.id}
                   onSelect={handleSelectPolicy}
+                  onViewDetails={handleViewDetails}
                 />
               ))}
             </div>
