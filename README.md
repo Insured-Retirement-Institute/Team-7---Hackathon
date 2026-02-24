@@ -1,5 +1,10 @@
 # Team TLDR Annuities - Team 7
 
+## Beacon API
+```
+https://stage-profile.an.annuitynexus.com/api/profile
+```
+
 ## Get started
 
 We are currently in the process of standing up [SwaggerHub](https://wwww.swaggerhub.com) to host OpenAPI definitions. More to come.
