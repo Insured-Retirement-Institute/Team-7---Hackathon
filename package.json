@@ -15,7 +15,7 @@
     "destroyBranch": "powershell cdk destroy --context stackId=$(git rev-parse --abbrev-ref HEAD)",
     "buildDeployBranch": "npm run build && npm run deployBranch",
     "bdb": "npm run buildDeployBranch",
-    "open": "powershell start https://s3.us-east-1.amazonaws.com/team7-$(git rev-parse --abbrev-ref HEAD)-website/index.html",
+    "open": "powershell start \"https://s3.us-east-1.amazonaws.com/team7-$($(git rev-parse --abbrev-ref HEAD).toLower())-website/index.html\"",
     "buildDeployBranchandOpen": "npm run bdb && npm run open",
     "bdbo": "npm run buildDeployBranchandOpen"
   },
