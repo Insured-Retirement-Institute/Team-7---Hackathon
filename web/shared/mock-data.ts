@@ -33,6 +33,15 @@ export interface InsurancePolicy {
   };
 }
 
+export interface PolicyProjectionPoint {
+  year: number;
+  age: number;
+  accumValue: number;
+  fee: number;
+  income: number;
+  events: string[];
+}
+
 export const policies: InsurancePolicy[] = [
   {
     id: "1",
@@ -168,3 +177,63 @@ export const navigationLinks = [
   { name: "Planning", icon: "Map", children: true },
   { name: "Insurance", icon: "Shield", active: true, children: true, subItems: ["Marketplace", "Policies"] },
 ];
+
+const projectionSeed: Array<Omit<PolicyProjectionPoint, "accumValue" | "fee" | "income"> & { income?: number }> = [
+  { year: 2025, age: 67, events: ["retire"], income: 0 },
+  { year: 2026, age: 68, events: [], income: 0 },
+  { year: 2027, age: 69, events: [], income: 0 },
+  { year: 2028, age: 70, events: ["income"], income: 6000 },
+  { year: 2029, age: 71, events: [], income: 6000 },
+  { year: 2030, age: 72, events: ["rmd"], income: 6000 },
+  { year: 2031, age: 73, events: [], income: 6000 },
+  { year: 2032, age: 74, events: [], income: 6000 },
+  { year: 2033, age: 75, events: [], income: 6000 },
+  { year: 2034, age: 76, events: [], income: 6000 },
+  { year: 2035, age: 77, events: [], income: 6000 },
+  { year: 2036, age: 78, events: [], income: 6000 },
+  { year: 2037, age: 79, events: ["EOL"], income: 6000 },
+];
+
+const growthRates = [
+  0.05, // 2025 -> 2026
+  0.06,
+  0.045,
+  0.055,
+  0.04,
+  0.07,
+  0.065,
+  0.05,
+  0.08,
+  0.06,
+  0.045,
+  0.05, // 2036 -> 2037
+];
+
+export const policyProjection: PolicyProjectionPoint[] = (() => {
+  const rows: PolicyProjectionPoint[] = [];
+  let accumValue = 250000;
+  let income = projectionSeed[0].income ?? 0;
+
+  projectionSeed.forEach((seed, index) => {
+    if (index > 0) {
+      const rate = growthRates[index - 1];
+      accumValue = Math.round(accumValue * (1 + rate));
+
+      if (income === 0 && (seed.income ?? 0) > 0) {
+        income = seed.income ?? 0; // start income when it first appears
+      }
+      income = income > 0 ? Math.round(income * (1 + rate)) : 0;
+    }
+
+    rows.push({
+      year: seed.year,
+      age: seed.age,
+      events: seed.events,
+      accumValue,
+      income,
+      fee: Math.round(accumValue * 0.05),
+    });
+  });
+
+  return rows;
+})();
