@@ -178,7 +178,7 @@ export const navigationLinks = [
   { name: "Insurance", icon: "Shield", active: true, children: true, subItems: ["Marketplace", "Policies"] },
 ];
 
-const projectionSeed: Array<Omit<PolicyProjectionPoint, "accumValue" | "fee" | "income"> & { income?: number }> = [
+export const projectionSeed: Array<Omit<PolicyProjectionPoint, "accumValue" | "fee" | "income"> & { income?: number }> = [
   { year: 2025, age: 67, events: ["retire"], income: 0 },
   { year: 2026, age: 68, events: [], income: 0 },
   { year: 2027, age: 69, events: [], income: 0 },
