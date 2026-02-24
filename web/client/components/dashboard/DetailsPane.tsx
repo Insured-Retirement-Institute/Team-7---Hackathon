@@ -20,7 +20,7 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
 
   const tabs = ["Chart", "Income Table", "Post Activation", "Tax Implications", "Watch Items", "Full View"] as const;
   type Tab = (typeof tabs)[number];
-  const [activeTab, setActiveTab] = useState<Tab>("Full View");
+  const [activeTab, setActiveTab] = useState<Tab>("Chart");
 
   return (
     <aside
