@@ -437,3 +437,4 @@ dist-ssr
 
 .config/
 !.env
+node_modules/
