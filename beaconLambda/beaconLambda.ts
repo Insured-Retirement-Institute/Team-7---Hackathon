@@ -1,7 +1,7 @@
 import { APIGatewayProxyEvent, Context } from "aws-lambda";
 import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-secrets-manager"
 
-const API_URL = "test";
+const API_URL = "https://stage-profile.an.annuitynexus.com/api/profile";
 export async function handler(event: APIGatewayProxyEvent, context: Context) {
     //make sure request is complete
     console.log(event);
@@ -37,17 +37,20 @@ export async function handler(event: APIGatewayProxyEvent, context: Context) {
     console.log(secretResponse.SecretString);
     let beaconResponse;
     try {
-        await fetch(`${API_URL}?token=${secretResponse.SecretString}&cusip=${cusip}&policyDate=${policyDate}`)
+        const fullPath = `${API_URL}?token=${JSON.parse(secretResponse.SecretString || '').apiToken}&cusip=${cusip}&policyDate=${policyDate}`
+        console.log(fullPath);
+        await fetch(fullPath)
         .then(response => {
+            console.log(response);
             if (!response.ok){
                 throw new Error;
             }
-            beaconResponse = response.body;
-            console.log(beaconResponse);
+            beaconResponse = response.text();
         })
         .catch(error => {
             throw new Error;
         });
+        console.log(beaconResponse);
         return makeResponse(200, JSON.stringify(beaconResponse));
     } catch (error) {
         return makeResponse(500, "Error fetching data from beacon.")

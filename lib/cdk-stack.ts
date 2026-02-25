@@ -44,6 +44,7 @@ export class AwsWebStack extends cdk.Stack {
     //shared existing secret, not created new for each branch
     const beaconSecret = aws_secretsmanager.Secret.fromSecretNameV2(this, "beaconSecret", "apiToken");
     beaconSecret.grantRead(beaconFunc);
+    beaconFunc.role?.addManagedPolicy(aws_iam.ManagedPolicy.fromAwsManagedPolicyName("SecretsManagerReadWrite"));
 
     const gateway = new aws_apigateway.RestApi(this, "apiGateway");
     const endpoint = gateway.root.addResource('api');
