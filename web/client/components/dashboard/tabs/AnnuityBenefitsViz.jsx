@@ -5,10 +5,11 @@ import { RightSidebar } from "./RightSidebar";
 // ─── API Configuration ───
 const API_URL = "https://stage-profile.an.annuitynexus.com/api/profile?token=xpdhwqifofnlkdnqbksurbcaldheqj&cusip=001399864&policydate=2022-11-01";
 
-const CONTRACT_YR = 3;
-const INIT_BB = 180000;
-const COST_BASIS = 100000;
-const CURRENT_AGE = 63;
+// Fallback values used when no policy is selected
+const DEFAULT_INIT_PREMIUM = 180000;
+const DEFAULT_COST_BASIS = 100000;
+const DEFAULT_CONTRACT_YR = 3;
+const DEFAULT_CURRENT_AGE = 63;
 
 const FALLBACK_PARAMS = {
   creditRate: 0.07, feeRate: 0.0145, maxCreditYrs: 12, stepUpGuarantee: 2.0,
@@ -69,7 +70,8 @@ function extractApiCatalog(raw) {
         );
         optionTables[opt] = {
           mawpTable: mawpCases.length ? buildT(mawpCases) : FALLBACK_PARAMS.mawpTable,
-          pipTable:  pipCases.length  ? buildT(pipCases)  : FALLBACK_PARAMS.pipTable,
+          // null means no PIP — model will keep MAWP rate after account depletion
+          pipTable: pipCases.length ? buildT(pipCases) : null,
         };
       });
 
@@ -80,7 +82,7 @@ function extractApiCatalog(raw) {
         incomeOptions.push("Default");
         optionTables["Default"] = {
           mawpTable: mawpAll.length ? buildT(mawpAll) : FALLBACK_PARAMS.mawpTable,
-          pipTable:  pipAll.length  ? buildT(pipAll)  : FALLBACK_PARAMS.pipTable,
+          pipTable:  pipAll.length  ? buildT(pipAll)  : null,
         };
       }
 
@@ -105,7 +107,7 @@ function buildRiderParams(catalog, selectedRider, selectedOption) {
   if (!catalog) return { ...FALLBACK_PARAMS, fromApi: false };
   const rider = catalog.riders.find((r) => r.name === selectedRider) || catalog.riders[0];
   const opt   = rider.incomeOptions.includes(selectedOption) ? selectedOption : rider.incomeOptions[0];
-  const tables = rider.optionTables[opt] || { mawpTable: FALLBACK_PARAMS.mawpTable, pipTable: FALLBACK_PARAMS.pipTable };
+  const tables = rider.optionTables[opt] || { mawpTable: FALLBACK_PARAMS.mawpTable, pipTable: null };
   return {
     productName: catalog.productName,
     riderName: rider.name,
@@ -132,17 +134,26 @@ function getMawpBand(age, t) { const b = t.find((r) => age >= r.minAge && age <=
 function getPipRate(age, t) { const b = t.find((r) => age >= r.minAge && age <= r.maxAge); return b ? b.single : t[t.length - 1]?.single ?? 0.035; }
 
 function runModel(params) {
-  const { growth = 0.052, lifeExp = 85, taxRate = 0.24, creditRate, feeRate, maxCreditYrs, stepUpGuarantee, mawpTable, pipTable } = params;
-  const initPremium = INIT_BB / (1 + creditRate * CONTRACT_YR);
-  let av = initPremium, bb = initPremium;
-  for (let yr = 1; yr <= CONTRACT_YR; yr++) { av = av + av * growth - bb * feeRate; bb = Math.max(av, initPremium * (1 + creditRate * yr)); }
-  const currentAV = av, currentBB = INIT_BB;
+  const {
+    growth = 0.052, lifeExp = 85, taxRate = 0.24, creditRate, feeRate, maxCreditYrs, stepUpGuarantee, mawpTable, pipTable,
+    initPremium: INIT_PREMIUM = DEFAULT_INIT_PREMIUM,
+    costBasis: COST_BASIS = DEFAULT_COST_BASIS,
+    contractYear: CONTRACT_YR = DEFAULT_CONTRACT_YR,
+    currentAge: CURRENT_AGE = DEFAULT_CURRENT_AGE,
+    currentAVActual = null,
+  } = params;
+  // Simulate from initial premium to derive current state
+  let av = INIT_PREMIUM, bb = INIT_PREMIUM;
+  for (let yr = 1; yr <= CONTRACT_YR; yr++) { av = av + av * growth - bb * feeRate; bb = Math.max(av, INIT_PREMIUM * (1 + creditRate * yr)); }
+  // Prefer the actual account value from policy data over the simulated one
+  const currentAV = (currentAVActual != null && currentAVActual > 0) ? currentAVActual : av;
+  const currentBB = Math.max(currentAV, INIT_PREMIUM * (1 + creditRate * CONTRACT_YR));
   function buildPre() {
     let avL = currentAV, bbL = currentBB; const rows = [];
     for (let yr = 0; yr <= maxCreditYrs - CONTRACT_YR; yr++) {
       const age = CURRENT_AGE + yr, cyr = CONTRACT_YR + yr;
       const avEOY = avL + avL * growth - bbL * feeRate;
-      let newBB = cyr < maxCreditYrs ? Math.max(avEOY, initPremium * (1 + creditRate * (cyr + 1))) : Math.max(avEOY, initPremium * (1 + creditRate * maxCreditYrs), initPremium * stepUpGuarantee);
+      let newBB = cyr < maxCreditYrs ? Math.max(avEOY, INIT_PREMIUM * (1 + creditRate * (cyr + 1))) : Math.max(avEOY, INIT_PREMIUM * (1 + creditRate * maxCreditYrs), INIT_PREMIUM * stepUpGuarantee);
       rows.push({ age, cyr, avEOY, bbEOY: newBB }); avL = avEOY; bbL = newBB;
     }
     return rows;
@@ -152,13 +163,16 @@ function runModel(params) {
     if (targetAge === CURRENT_AGE) return { av: currentAV, bb: currentBB };
     const yrs = targetAge - CURRENT_AGE;
     if (yrs > 0 && yrs <= preActRows.length) { const r = preActRows[yrs - 1]; return { av: r.avEOY, bb: r.bbEOY }; }
-    const last = preActRows[preActRows.length - 1]; let avX = last.avEOY, bbX = last.bbEOY;
+    const last = preActRows.length > 0 ? preActRows[preActRows.length - 1] : { avEOY: currentAV, bbEOY: currentBB };
+    let avX = last.avEOY, bbX = last.bbEOY;
     for (let i = 0; i < yrs - preActRows.length; i++) { avX = avX + avX * growth - bbX * feeRate; bbX = Math.max(avX, bbX); }
     return { av: avX, bb: bbX };
   }
   function computeScenario(actAge) {
     const { bb: sBB, av: sAV } = getState(actAge);
-    const mawpRate = getMawpRate(actAge, mawpTable), pipRate = getPipRate(actAge, pipTable);
+    const mawpRate = getMawpRate(actAge, mawpTable);
+    // If no PIP table exists for this rider, income continues at the MAWP rate after depletion
+    const pipRate = pipTable ? getPipRate(actAge, pipTable) : mawpRate;
     const mawpIncome = sBB * mawpRate, pipIncome = sBB * pipRate, drain = mawpIncome + sBB * feeRate;
     let avPost = sAV, depletesAtAge = null, mawpYears = 0;
     for (let y = 0; y < lifeExp - actAge + 1; y++) {
@@ -172,6 +186,10 @@ function runModel(params) {
   let optAge = CURRENT_AGE, maxTotal = 0;
   scenarios.forEach((s) => { if (s.grandTotal > maxTotal) { maxTotal = s.grandTotal; optAge = s.activateAtAge; } });
   const optS = scenarios.find((s) => s.activateAtAge === optAge), curS = scenarios.find((s) => s.activateAtAge === CURRENT_AGE);
+  // Guard: if scenarios is empty (e.g. CURRENT_AGE > 78) or optS/curS can't be found, return safe fallback
+  if (!optS || !curS) {
+    return { scenarios, optAge: CURRENT_AGE, optS: null, curS: null, postAct: [], preActRows, currentAV, currentBB, lifoTax: { yearByYear: [], totalGain: 0, avAtActivation: currentAV }, taxChartData: [], initPremium: INIT_PREMIUM, costBasis: COST_BASIS, contractYear: CONTRACT_YR, currentAge: CURRENT_AGE };
+  }
   function buildPostAct(s, oAge) {
     let avP = s.avAtActivation, cumIncome = 0, depleted = false; const rows = [];
     for (let y = 0; y < lifeExp - oAge; y++) {
@@ -209,12 +227,31 @@ function runModel(params) {
     }
     return data;
   }
-  return { scenarios, optAge, optS, curS, postAct, preActRows, currentAV, currentBB, lifoTax, taxChartData: buildTaxComp() };
+  return { scenarios, optAge, optS, curS, postAct, preActRows, currentAV, currentBB, lifoTax, taxChartData: buildTaxComp(), initPremium: INIT_PREMIUM, costBasis: COST_BASIS, contractYear: CONTRACT_YR, currentAge: CURRENT_AGE };
 }
 
 const fmt = (n) => "$" + Math.round(n).toLocaleString();
 const fmtK = (n) => Math.abs(n) >= 1e6 ? "$" + (n / 1e6).toFixed(1) + "M" : Math.abs(n) >= 1e3 ? "$" + Math.round(n / 1e3) + "k" : "$" + Math.round(n);
 const pct = (n) => (n * 100).toFixed(2) + "%";
+
+function parseCurrency(str) {
+  if (!str || typeof str !== "string") return null;
+  const n = parseFloat(str.replace(/[$,]/g, ""));
+  return isNaN(n) ? null : n;
+}
+
+function calcContractYear(issueEffective, valuationDate) {
+  if (!issueEffective || !valuationDate || issueEffective === "--" || valuationDate === "--") return null;
+  const parseDateStr = (s) => {
+    const parts = s.split("/");
+    if (parts.length === 3) return new Date(+parts[2], +parts[0] - 1, +parts[1]);
+    return new Date(s);
+  };
+  const issue = parseDateStr(issueEffective);
+  const val = parseDateStr(valuationDate);
+  if (isNaN(issue.getTime()) || isNaN(val.getTime())) return null;
+  return Math.max(0, Math.round((val - issue) / (365.25 * 24 * 60 * 60 * 1000)));
+}
 
 // ─── Color palette matching CRM screenshot ───
 const C = {
@@ -317,7 +354,7 @@ const tabs = [
   { id: "detail", label: "Full Analysis" },
 ];
 
-export default function AnnuityBenefitsViz({ embedTab, preloadedData, sidebarPlacement = "inline", onSidebarChange } = {}) {
+export default function AnnuityBenefitsViz({ embedTab, preloadedData, policy, sidebarPlacement = "inline", onSidebarChange, onChartDataChange } = {}) {
   const [activeTab, setActiveTab] = useState(embedTab || "overview");
   const displayTab = embedTab || activeTab;
   const [growthRate, setGrowthRate] = useState(5.2);
@@ -331,6 +368,23 @@ export default function AnnuityBenefitsViz({ embedTab, preloadedData, sidebarPla
   const [apiError, setApiError] = useState(null);
   const [lastFetched, setLastFetched] = useState(null);
   const [showParamPanel, setShowParamPanel] = useState(false);
+  const [activationAge, setActivationAge] = useState(null);
+
+  const policyParams = useMemo(() => {
+    if (!policy) return {};
+    const initPremium = parseCurrency(policy.totalPremium);
+    const costBasis = parseCurrency(policy.costBasis);
+    const currentAVActual = parseCurrency(policy.value);
+    const currentAge = policy.clientAge ?? DEFAULT_CURRENT_AGE;
+    const contractYear = calcContractYear(policy.issueEffective, policy.valuationDate);
+    return {
+      ...(initPremium != null && initPremium > 0 && { initPremium }),
+      ...(costBasis != null && costBasis > 0 && { costBasis }),
+      ...(currentAVActual != null && currentAVActual > 0 && { currentAVActual }),
+      currentAge,
+      ...(contractYear != null && { contractYear }),
+    };
+  }, [policy]);
 
   const fetchApiData = useCallback(async () => {
     setApiStatus("loading");
@@ -380,23 +434,38 @@ export default function AnnuityBenefitsViz({ embedTab, preloadedData, sidebarPla
         setApiStatus("partial");
       }
       setLastFetched(new Date());
-    } else {
+    } else if (!policy) {
+      // Only fall back to the hardcoded API when running standalone (no policy context).
+      // When embedded in the details pane, wait for preloadedData instead of racing
+      // against the beacon fetch with a hardcoded URL.
       fetchApiData();
     }
-  }, [preloadedData, fetchApiData]);
+  }, [preloadedData, policy, fetchApiData]);
 
-  const model = useMemo(() => runModel({
-    growth: growthRate / 100, lifeExp, taxRate: taxRate / 100,
-    creditRate: riderParams.creditRate, feeRate: riderParams.feeRate,
-    maxCreditYrs: riderParams.maxCreditYrs, stepUpGuarantee: riderParams.stepUpGuarantee,
-    mawpTable: riderParams.mawpTable, pipTable: riderParams.pipTable,
-  }), [growthRate, lifeExp, taxRate, riderParams]);
+  const model = useMemo(() => {
+    try {
+      return runModel({
+        growth: growthRate / 100, lifeExp, taxRate: taxRate / 100,
+        creditRate: riderParams.creditRate, feeRate: riderParams.feeRate,
+        maxCreditYrs: riderParams.maxCreditYrs, stepUpGuarantee: riderParams.stepUpGuarantee,
+        mawpTable: riderParams.mawpTable, pipTable: riderParams.pipTable,
+        ...policyParams,
+      });
+    } catch (err) {
+      console.error("[AnnuityBenefitsViz] runModel error:", err);
+      return null;
+    }
+  }, [growthRate, lifeExp, taxRate, riderParams, policyParams]);
 
-  const { optAge, optS, curS, postAct, scenarios, currentAV, lifoTax, taxChartData } = model;
-  const gain = optS.grandTotal - curS.grandTotal;
+  const { optAge = DEFAULT_CURRENT_AGE, optS = null, curS = null, postAct = [], scenarios = [], currentAV = 0, currentBB = 0, lifoTax = { yearByYear: [], totalGain: 0, avAtActivation: 0 }, taxChartData = [], initPremium = DEFAULT_INIT_PREMIUM, costBasis = DEFAULT_COST_BASIS, contractYear = DEFAULT_CONTRACT_YR, currentAge = DEFAULT_CURRENT_AGE } = model ?? {};
+
+  // Sync activation age to model's optimal age when rider/assumptions change
+  useEffect(() => { setActivationAge(optAge); }, [optAge]);
+
+  const gain = optS && curS ? optS.grandTotal - curS.grandTotal : 0;
   const incomeData = postAct.map((r) => ({ age: r.age, mawp: r.phase === "MAWP" ? r.income : 0, pip: r.phase === "PIP" ? r.income : 0, cumulative: r.cumIncome, av: r.av }));
   const scenarioData = scenarios.map((s) => ({ age: s.activateAtAge, total: s.grandTotal, isOpt: s.activateAtAge === optAge, mawp: s.mawpTotal, pip: s.pipTotal }));
-  const bbData = model.preActRows.map((r) => ({ age: r.age, bb: r.bbEOY, av: r.avEOY }));
+  const bbData = (model?.preActRows ?? []).map((r) => ({ age: r.age, bb: r.bbEOY, av: r.avEOY }));
 
   const statusDot = { idle: "#8896a8", loading: "#d97706", success: "#2d7a4e", partial: "#d97706", error: "#dc2626" }[apiStatus];
   const statusText = { idle: "Not loaded", loading: "Fetching…", success: "Live", partial: "Defaults", error: "Error" }[apiStatus];
@@ -416,10 +485,13 @@ export default function AnnuityBenefitsViz({ embedTab, preloadedData, sidebarPla
       setGrowthRate={setGrowthRate}
       setLifeExp={setLifeExp}
       setTaxRate={setTaxRate}
-      contractYear={CONTRACT_YR}
-      costBasis={COST_BASIS}
+      contractYear={contractYear}
+      costBasis={costBasis}
       currentAV={currentAV}
-      initialBenefitBase={INIT_BB}
+      initialBenefitBase={currentBB}
+      activationAge={activationAge ?? optAge}
+      setActivationAge={setActivationAge}
+      currentAge={currentAge}
       optimalAge={optAge}
       gain={gain}
       optimalScenario={optS}
@@ -431,15 +503,75 @@ export default function AnnuityBenefitsViz({ embedTab, preloadedData, sidebarPla
       getMawpBand={getMawpBand}
       getMawpRate={getMawpRate}
     />
-  ), [apiCatalog, selectedRider, selectedOption, riderParams, growthRate, lifeExp, taxRate, currentAV, optAge, gain, optS, activeTab]);
+  ), [apiCatalog, selectedRider, selectedOption, riderParams, growthRate, lifeExp, taxRate, currentAV, currentBB, costBasis, contractYear, currentAge, activationAge, optAge, gain, optS, activeTab]);
+
+  const yearlyBreakdown = useMemo(() => {
+    const { preActRows, currentAV, currentBB, optS, scenarios } = model ?? {};
+    if (!model || !optS || !preActRows) return [];
+    const gr = growthRate / 100;
+    const fr = riderParams.feeRate;
+    const rows = [];
+
+    const selAge = activationAge ?? optS.activateAtAge;
+    const selS = scenarios.find((s) => s.activateAtAge === selAge) ?? optS;
+
+    // Pre-activation accumulation phase — only up to (but not including) selAge
+    let prevAV = currentAV;
+    let prevBB = currentBB;
+    for (const row of preActRows) {
+      if (row.age >= selAge) break;
+      const growthAmt = Math.round(prevAV * gr);
+      const feeAmt = Math.round(prevBB * fr);
+      rows.push({
+        age: row.age,
+        growth: growthAmt,
+        fees: feeAmt,
+        income: 0,
+        grossAV: Math.round(prevAV + growthAmt),
+        netAV: Math.round(row.avEOY),
+        phase: "accumulation",
+      });
+      prevAV = row.avEOY;
+      prevBB = row.bbEOY;
+    }
+
+    // Post-activation income phase — rebuilt for selAge/selS
+    let avPost = selS.avAtActivation;
+    let depleted = false;
+    for (let y = 0; y < lifeExp - selAge; y++) {
+      const age = selAge + y;
+      if (depleted) {
+        rows.push({ age, growth: 0, fees: 0, income: Math.round(selS.pipIncome), grossAV: 0, netAV: 0, phase: "pip" });
+      } else {
+        const growthAmt = Math.round(avPost * gr);
+        const feeAmt = Math.round(selS.bb * fr);
+        const incomeAmt = Math.round(selS.mawpIncome);
+        const eoy = avPost + avPost * gr - selS.bb * fr - selS.mawpIncome;
+        rows.push({
+          age,
+          growth: growthAmt,
+          fees: feeAmt,
+          income: incomeAmt,
+          grossAV: Math.round(avPost + growthAmt),
+          netAV: Math.max(0, Math.round(eoy)),
+          phase: "income",
+        });
+        if (eoy <= 0) depleted = true;
+        avPost = Math.max(0, eoy);
+      }
+    }
+
+    return rows;
+  }, [model, growthRate, lifeExp, riderParams, activationAge]);
 
   useEffect(() => {
-    if (sidebarPlacement === "external" && onSidebarChange) {
-      onSidebarChange(sidebar);
-    } else if (onSidebarChange) {
-      onSidebarChange(null);
+    if (sidebarPlacement === "external") {
+      onSidebarChange?.(sidebar);
+    } else {
+      onSidebarChange?.(null);
     }
-  }, [sidebarPlacement, onSidebarChange, sidebar]);
+    onChartDataChange?.(yearlyBreakdown);
+  }, [sidebarPlacement, sidebar, yearlyBreakdown, onSidebarChange, onChartDataChange]);
 
   if (embedTab) {
     return (
@@ -450,9 +582,9 @@ export default function AnnuityBenefitsViz({ embedTab, preloadedData, sidebarPla
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
               {[
                 ["Activation Age", `Age ${optAge}`, C.accent],
-                ["Annual MAWP Income", fmt(optS.mawpIncome), C.green],
-                ["AV Depletes", optS.depletesAtAge ? `Age ${optS.depletesAtAge}` : "Never", optS.depletesAtAge ? C.red : C.green],
-                ["Total Lifetime Income", fmt(optS.grandTotal), C.accent],
+                ["Annual MAWP Income", optS ? fmt(optS.mawpIncome) : "—", C.green],
+                ["AV Depletes", optS?.depletesAtAge ? `Age ${optS.depletesAtAge}` : "Never", optS?.depletesAtAge ? C.red : C.green],
+                ["Total Lifetime Income", optS ? fmt(optS.grandTotal) : "—", C.accent],
               ].map(([l, v, vc], i) => (
                 <Card key={i} style={{ padding: "11px 13px" }}>
                   <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.1em", color: C.textLight, marginBottom: 5 }}>{l}</div>
@@ -493,7 +625,7 @@ export default function AnnuityBenefitsViz({ embedTab, preloadedData, sidebarPla
                       <Area type="monotone" dataKey="av" name="Account Value" stroke={C.chartBlue} fill="url(#avG2)" strokeWidth={1.5} />
                       <Area type="stepAfter" dataKey="mawp" name="MAWP" stroke={C.chartGreen} fill="url(#mG2)" strokeWidth={1.5} />
                       <Area type="stepAfter" dataKey="pip" name="PIP" stroke={C.chartRed} fill="none" strokeWidth={1.5} strokeDasharray="4 2" />
-                      {optS.depletesAtAge && <ReferenceLine x={optS.depletesAtAge} stroke={C.chartRed} strokeDasharray="4 2" label={{ value: "AV Depletes", position: "insideTopRight", fill: C.red, fontSize: 9 }} />}
+                      {optS?.depletesAtAge && <ReferenceLine x={optS.depletesAtAge} stroke={C.chartRed} strokeDasharray="4 2" label={{ value: "AV Depletes", position: "insideTopRight", fill: C.red, fontSize: 9 }} />}
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
@@ -610,11 +742,11 @@ export default function AnnuityBenefitsViz({ embedTab, preloadedData, sidebarPla
             </div>
             <div>
               <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.4)", marginBottom: 4 }}>PIP Rates</div>
-              {riderParams.pipTable.map((b, i) => (
+              {riderParams.pipTable ? riderParams.pipTable.map((b, i) => (
                 <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "rgba(255,255,255,0.65)", padding: "1px 0" }}>
                   <span>{b.minAge}–{b.maxAge}</span><span style={{ color: "#fca5a5" }}>{pct(b.single)}</span>
                 </div>
-              ))}
+              )) : <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontStyle: "italic" }}>Continues at MAWP rate</div>}
             </div>
           </div>
           {apiStatus === "error" && <div style={{ marginTop: 8, fontSize: 10, color: "#fca5a5" }}>⚠ {apiError} — using fallback defaults</div>}
@@ -641,10 +773,10 @@ export default function AnnuityBenefitsViz({ embedTab, preloadedData, sidebarPla
               {/* Summary metric row */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
                 {[
-                  { label: "Annual Income", value: fmt(optS.mawpIncome), sub: "MAWP · guaranteed for life", color: C.green, bg: C.greenBg },
-                  { label: "Total Projected Income", value: fmt(optS.grandTotal), sub: `Ages ${optAge}–${lifeExp}`, color: C.accent, bg: C.accentLight },
-                  { label: "Benefit Base at Activation", value: fmt(optS.bb), sub: `+${pct(optS.bb / INIT_BB - 1)} from ${pct(riderParams.creditRate)} credits`, color: C.accent, bg: C.accentLight },
-                  { label: "Income Advantage", value: "+" + fmt(gain), sub: "vs. activating today at 63", color: C.green, bg: C.greenBg },
+                  { label: "Annual Income", value: optS ? fmt(optS.mawpIncome) : "—", sub: "MAWP · guaranteed for life", color: C.green, bg: C.greenBg },
+                  { label: "Total Projected Income", value: optS ? fmt(optS.grandTotal) : "—", sub: `Ages ${optAge}–${lifeExp}`, color: C.accent, bg: C.accentLight },
+                  { label: "Benefit Base at Activation", value: optS ? fmt(optS.bb) : "—", sub: optS ? `+${pct(optS.bb / initPremium - 1)} from ${pct(riderParams.creditRate)} credits` : "", color: C.accent, bg: C.accentLight },
+                  { label: "Income Advantage", value: "+" + fmt(gain), sub: `vs. activating today at age ${currentAge}`, color: C.green, bg: C.greenBg },
                 ].map((m, i) => (
                   <Card key={i} style={{ padding: "12px 14px", borderTop: `3px solid ${m.color}` }}>
                     <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.1em", color: C.textLight, marginBottom: 6 }}>{m.label}</div>
@@ -664,22 +796,22 @@ export default function AnnuityBenefitsViz({ embedTab, preloadedData, sidebarPla
                     <LabelValue label="Product Type" value="Variable Annuity" border />
                     <LabelValue label="Rider" value={riderParams.riderName} border apiTag={apiStatus === "success"} />
                     <LabelValue label="Plan Type" value="Non-Qualified (LIFO)" border />
-                    <LabelValue label="Total Premium" value={fmt(COST_BASIS)} border />
-                    <LabelValue label="Cost Basis" value={fmt(COST_BASIS)} border />
+                    <LabelValue label="Total Premium" value={fmt(initPremium)} border />
+                    <LabelValue label="Cost Basis" value={fmt(costBasis)} border />
                     <LabelValue label="Account Value" value={fmt(currentAV)} valueColor={C.accent} border />
-                    <LabelValue label="Benefit Base" value={fmt(INIT_BB)} valueColor={C.accent} />
+                    <LabelValue label="Benefit Base" value={fmt(currentBB)} valueColor={C.accent} />
                   </Accordion>
                   <Accordion title="Contract Dates">
                     <LabelValue label="Issue Effective" value="11/01/2022" border />
-                    <LabelValue label="Contract Year" value={CONTRACT_YR} border />
-                    <LabelValue label="Owner Age at Issue" value="60" border />
-                    <LabelValue label="Current Owner Age" value={CURRENT_AGE} />
+                    <LabelValue label="Contract Year" value={contractYear} border />
+                    <LabelValue label="Owner Age at Issue" value={currentAge - contractYear} border />
+                    <LabelValue label="Current Owner Age" value={currentAge} />
                   </Accordion>
                   <Accordion title="Contract Details">
-                    <LabelValue label="Original Investment" value={fmt(COST_BASIS)} border />
+                    <LabelValue label="Original Investment" value={fmt(initPremium)} border />
                     <LabelValue label="Account Value" value={fmt(currentAV)} valueColor={C.accent} border />
-                    <LabelValue label="Unrealized Gain" value={fmt(currentAV - COST_BASIS)} valueColor={C.green} border />
-                    <LabelValue label="AV Depletes At" value={optS.depletesAtAge ? `Age ${optS.depletesAtAge}` : `> Age ${lifeExp}`} valueColor={optS.depletesAtAge ? C.red : C.green} />
+                    <LabelValue label="Unrealized Gain" value={fmt(currentAV - costBasis)} valueColor={C.green} border />
+                    <LabelValue label="AV Depletes At" value={optS?.depletesAtAge ? `Age ${optS.depletesAtAge}` : `> Age ${lifeExp}`} valueColor={optS?.depletesAtAge ? C.red : C.green} />
                   </Accordion>
                 </Card>
 
@@ -710,16 +842,22 @@ export default function AnnuityBenefitsViz({ embedTab, preloadedData, sidebarPla
                   </Accordion>
                   <Accordion title="PIP Rate Table — Option 2" defaultOpen={false}>
                     <div style={{ padding: "4px 14px 8px" }}>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", borderBottom: `1px solid ${C.borderLight}`, paddingBottom: 4, marginBottom: 2 }}>
-                        {["Age Band", "Single Life", "Joint Life"].map(h => <span key={h} style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.08em", color: C.textLight }}>{h}</span>)}
-                      </div>
-                      {riderParams.pipTable.map((b, i) => (
-                        <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", padding: "4px 0", borderBottom: i < riderParams.pipTable.length - 1 ? `1px solid ${C.borderLight}` : "none" }}>
-                          <span style={{ fontSize: 11, color: C.textMid }}>{b.minAge}–{b.maxAge}</span>
-                          <span style={{ fontSize: 11, fontWeight: 600, color: C.red }}>{pct(b.single)}</span>
-                          <span style={{ fontSize: 11, color: C.textMid }}>{pct(b.joint)}</span>
-                        </div>
-                      ))}
+                      {riderParams.pipTable ? (
+                        <>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", borderBottom: `1px solid ${C.borderLight}`, paddingBottom: 4, marginBottom: 2 }}>
+                            {["Age Band", "Single Life", "Joint Life"].map(h => <span key={h} style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.08em", color: C.textLight }}>{h}</span>)}
+                          </div>
+                          {riderParams.pipTable.map((b, i) => (
+                            <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", padding: "4px 0", borderBottom: i < riderParams.pipTable.length - 1 ? `1px solid ${C.borderLight}` : "none" }}>
+                              <span style={{ fontSize: 11, color: C.textMid }}>{b.minAge}–{b.maxAge}</span>
+                              <span style={{ fontSize: 11, fontWeight: 600, color: C.red }}>{pct(b.single)}</span>
+                              <span style={{ fontSize: 11, color: C.textMid }}>{pct(b.joint)}</span>
+                            </div>
+                          ))}
+                        </>
+                      ) : (
+                        <div style={{ fontSize: 11, color: C.textLight, fontStyle: "italic", padding: "4px 0" }}>No PIP rate — income continues at MAWP rate after account depletion</div>
+                      )}
                     </div>
                   </Accordion>
                 </Card>
@@ -733,9 +871,9 @@ export default function AnnuityBenefitsViz({ embedTab, preloadedData, sidebarPla
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
                 {[
                   ["Activation Age", `Age ${optAge}`, C.accent],
-                  ["Annual MAWP Income", fmt(optS.mawpIncome), C.green],
-                  ["AV Depletes", optS.depletesAtAge ? `Age ${optS.depletesAtAge}` : "Never", optS.depletesAtAge ? C.red : C.green],
-                  ["Total Lifetime Income", fmt(optS.grandTotal), C.accent],
+                  ["Annual MAWP Income", optS ? fmt(optS.mawpIncome) : "—", C.green],
+                  ["AV Depletes", optS?.depletesAtAge ? `Age ${optS.depletesAtAge}` : "Never", optS?.depletesAtAge ? C.red : C.green],
+                  ["Total Lifetime Income", optS ? fmt(optS.grandTotal) : "—", C.accent],
                 ].map(([l, v, vc], i) => (
                   <Card key={i} style={{ padding: "11px 13px" }}>
                     <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.1em", color: C.textLight, marginBottom: 5 }}>{l}</div>
@@ -777,7 +915,7 @@ export default function AnnuityBenefitsViz({ embedTab, preloadedData, sidebarPla
                         <Area type="monotone" dataKey="av" name="Account Value" stroke={C.chartBlue} fill="url(#avG)" strokeWidth={1.5} />
                         <Area type="stepAfter" dataKey="mawp" name="MAWP" stroke={C.chartGreen} fill="url(#mG)" strokeWidth={1.5} />
                         <Area type="stepAfter" dataKey="pip" name="PIP" stroke={C.chartRed} fill="none" strokeWidth={1.5} strokeDasharray="4 2" />
-                        {optS.depletesAtAge && <ReferenceLine x={optS.depletesAtAge} stroke={C.chartRed} strokeDasharray="4 2" label={{ value: "AV Depletes", position: "insideTopRight", fill: C.red, fontSize: 9 }} />}
+                        {optS?.depletesAtAge && <ReferenceLine x={optS.depletesAtAge} stroke={C.chartRed} strokeDasharray="4 2" label={{ value: "AV Depletes", position: "insideTopRight", fill: C.red, fontSize: 9 }} />}
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
@@ -876,7 +1014,7 @@ export default function AnnuityBenefitsViz({ embedTab, preloadedData, sidebarPla
                     <tbody>
                       {scenarios.map((s, i) => {
                         const isOpt = s.activateAtAge === optAge;
-                        const diff = s.grandTotal - optS.grandTotal;
+                        const diff = optS ? s.grandTotal - optS.grandTotal : 0;
                         return (
                           <tr key={s.activateAtAge} className="row-hover" style={{ borderBottom: `1px solid ${C.borderLight}`, background: isOpt ? C.accentLight : i % 2 === 0 ? C.white : "#fafbfc" }}>
                             <td style={{ padding: "6px 10px", textAlign: "right", fontWeight: isOpt ? 700 : 400, color: isOpt ? C.accent : C.text }}>
@@ -905,12 +1043,12 @@ export default function AnnuityBenefitsViz({ embedTab, preloadedData, sidebarPla
           {activeTab === "tax" && (
             <div className="fade-in">
               <div style={{ background: "#fffbeb", border: `1px solid #fcd34d`, borderRadius: 4, padding: "10px 14px", marginBottom: 14, fontSize: 11, color: C.amber }}>
-                <strong>Non-Qualified LIFO Treatment:</strong> Funded with {fmt(COST_BASIS)} after-tax dollars. Under IRS LIFO rules, withdrawals are treated as earnings first (100% taxable) until gains are exhausted, then as tax-free return of basis.
+                <strong>Non-Qualified LIFO Treatment:</strong> Funded with {fmt(costBasis)} after-tax dollars. Under IRS LIFO rules, withdrawals are treated as earnings first (100% taxable) until gains are exhausted, then as tax-free return of basis.
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10, marginBottom: 14 }}>
                 {[
-                  ["Cost Basis", fmt(COST_BASIS), C.text],
+                  ["Cost Basis", fmt(costBasis), C.text],
                   ["AV at Activation", fmt(lifoTax.avAtActivation), C.accent],
                   ["Total Gain (LIFO)", fmt(lifoTax.totalGain), C.red],
                   ["Lifetime Tax Owed", fmt(lifoTax.yearByYear[lifoTax.yearByYear.length - 1]?.cumTax || 0), C.amber],
@@ -940,7 +1078,7 @@ export default function AnnuityBenefitsViz({ embedTab, preloadedData, sidebarPla
                   </div>
                 </Card>
                 <Card>
-                  <CardHeader title="Annuity vs. Taxable Account" subtitle={`Cumulative after-tax · ${fmt(COST_BASIS)} starting investment`} />
+                  <CardHeader title="Annuity vs. Taxable Account" subtitle={`Cumulative after-tax · ${fmt(costBasis)} starting investment`} />
                   <div style={{ padding: "12px 4px 8px" }}>
                     <ResponsiveContainer width="100%" height={200}>
                       <LineChart data={taxChartData}>
@@ -957,7 +1095,7 @@ export default function AnnuityBenefitsViz({ embedTab, preloadedData, sidebarPla
               </div>
 
               <Card>
-                <CardHeader title="Year-by-Year LIFO Tax Schedule" subtitle={`Non-qualified GLWB · ${fmt(COST_BASIS)} cost basis · ${taxRate}% marginal rate`} />
+                <CardHeader title="Year-by-Year LIFO Tax Schedule" subtitle={`Non-qualified GLWB · ${fmt(costBasis)} cost basis · ${taxRate}% marginal rate`} />
                 <div style={{ overflowX: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
                     <thead>
@@ -1026,7 +1164,7 @@ export default function AnnuityBenefitsViz({ embedTab, preloadedData, sidebarPla
                     </thead>
                     <tbody>
                       {scenarios.map((s, i) => {
-                        const isOpt = s.activateAtAge === optAge, diff = s.grandTotal - optS.grandTotal;
+                        const isOpt = s.activateAtAge === optAge, diff = optS ? s.grandTotal - optS.grandTotal : 0;
                         return (
                           <tr key={s.activateAtAge} className="row-hover" style={{ borderBottom: `1px solid ${C.borderLight}`, background: isOpt ? C.accentLight : i % 2 === 0 ? C.white : "#fafbfc" }}>
                             <td style={{ padding: "6px 10px", textAlign: "right", fontWeight: isOpt ? 700 : 400, color: isOpt ? C.accent : C.text }}>{s.activateAtAge} {isOpt && <Badge>OPT</Badge>}</td>

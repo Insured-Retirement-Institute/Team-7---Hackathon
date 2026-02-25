@@ -16,6 +16,7 @@ export interface InsurancePolicy {
   surrenderValue: string;
   costBasis: string;
   netDeathBenefit: string;
+  clientAge?: number;
   maturityDate?: string;
   receivedDate?: string;
   benefits?: {
@@ -52,6 +53,45 @@ export interface PolicyProjectionPoint {
 }
 
 export const policies: InsurancePolicy[] = [
+  {
+    id: "8",
+    cusip: "246115208",
+    policyDate: "2025-07-01",
+    name: "Accelerator Prime Variable Annuity",
+    asOfDate: "11/1/2022",
+    issueEffective: "11/1/2019",
+    valuationDate: "11/1/2022",
+    value: "$208,940",
+    incomeSw: true,
+    contractNumber: "APV246115208",
+    issuer: "Delaware Life Insurance Company",
+    productType: "Variable Annuity",
+    totalPremium: "$175,000",
+    totalWithdrawal: "$0",
+    surrenderValue: "$197,500",
+    costBasis: "$100,000",
+    netDeathBenefit: "$215,200",
+    clientAge: 61,
+    maturityDate: "11/1/2054",
+    receivedDate: "10/15/2019",
+    benefits: { growth: true, principalProtection: false, income: true, deathBenefit: true },
+    contractDetails: {
+      totalContractAmount: "$208,940",
+      netDeathBenefit: "$215,200",
+      grossDeathBenefit: "$215,200",
+      originalInvestmentValue: "$175,000",
+      surrenderValue: "$197,500",
+      totalPremium: "$175,000",
+      totalWithdrawal: "$0",
+      preTEFRA_Cost: "$0",
+      postTEFRA_Cost: "$100,000",
+      yearEndValue: "$202,100",
+      costBasis: "$100,000",
+      projectedPaymentAmount: "$1,058",
+      projectedPaymentAmountAnnual: "$12,700",
+      guaranteedProjectedAmount: "$12,700",
+    },
+  },
     {
     id: "7",
     cusip: "001399864",
@@ -70,6 +110,7 @@ export const policies: InsurancePolicy[] = [
     surrenderValue: "$200,780",
     costBasis: "$100,000",
     netDeathBenefit: "$220,508",
+    clientAge: 63,
     maturityDate: "11/1/2054",
     receivedDate: "10/15/2019",
     benefits: { growth: true, principalProtection: false, income: true, deathBenefit: true },

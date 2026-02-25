@@ -6,10 +6,14 @@ interface ApiRequest {
 }
 
 function normalizeDate(policyDate: string): string {
-  // Convert MM/DD/YYYY → YYYY-MM-DD if needed
+  // MM/DD/YYYY → YYYY-MM-DD
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(policyDate)) {
     const [month, day, year] = policyDate.split("/");
     return `${year}-${month}-${day}`;
+  }
+  // YYYY/MM/DD → YYYY-MM-DD
+  if (/^\d{4}\/\d{2}\/\d{2}$/.test(policyDate)) {
+    return policyDate.replace(/\//g, "-");
   }
   return policyDate;
 }
