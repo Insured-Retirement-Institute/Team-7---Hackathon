@@ -19,7 +19,7 @@ interface Props {
   onClose: () => void;
 }
 
-const TABS = ["Chart", "Tax Implications", "Watch Items", "Full View"] as const;
+const TABS = ["Chart", "Watch Items", "Full View"] as const;
 type Tab = (typeof TABS)[number];
 
 export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
@@ -31,7 +31,6 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
 
   const sectionRefs = useRef<Record<Tab, HTMLElement | null>>({
     Chart: null,
-    "Tax Implications": null,
     "Watch Items": null,
     "Full View": null,
   });
@@ -97,7 +96,6 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
 
   const tabContent: Record<Tab, React.ReactNode> = {
     Chart: <ChartTab policy={policy} sidebar={annuitySidebar} chartData={chartData} />,
-    "Tax Implications": <TaxImplicationsTab policy={policy} />,
     "Watch Items": <WatchItemsTab />,
     "Full View": <FullViewTab policy={policy} />,
   };
