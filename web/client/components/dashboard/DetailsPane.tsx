@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { X } from "lucide-react";
 import { InsurancePolicy } from "@shared/mock-data";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,36 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
   const tabs = ["Chart", "Income Table", "Post Activation", "Tax Implications", "Watch Items", "Full View", "Annuity Benefits"] as const;
   type Tab = (typeof tabs)[number];
   const [activeTab, setActiveTab] = useState<Tab>("Chart");
+  const sectionRefs = useRef<Record<Tab, HTMLElement | null>>({
+    Chart: null,
+    "Income Table": null,
+    "Post Activation": null,
+    "Tax Implications": null,
+    "Watch Items": null,
+    "Full View": null,
+    "Annuity Benefits": null,
+  });
+
+  const sectionId = (tab: Tab) => `details-section-${tab.toLowerCase().replace(/\s+/g, "-")}`;
+
+  const handleTabClick = (tab: Tab) => {
+    setActiveTab(tab);
+
+    const section = sectionRefs.current[tab];
+    if (section) {
+      section.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  const tabContent: Record<Tab, React.ReactNode> = {
+    Chart: <ChartTab policy={policy} />,
+    "Income Table": <IncomeTableTab policy={policy} />,
+    "Post Activation": <PostActivationTab policy={policy} />,
+    "Tax Implications": <TaxImplicationsTab policy={policy} />,
+    "Watch Items": <WatchItemsTab />,
+    "Full View": <FullViewTab policy={policy} />,
+    "Annuity Benefits": <AnnuityBenefitsTab />,
+  };
 
   return (
     <aside
@@ -48,83 +78,74 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4">
-        <div className="max-w-[1200px] mx-auto space-y-6">
-        {/* Title and date */}
-        <div className="border-b pb-4">
-          <h3 className="text-sm font-bold text-primary mb-1">{policy.name}</h3>
-          <p className="text-[10px] text-gray-400">As of {policy.asOfDate}</p>
-          
-          <div className="grid grid-cols-3 gap-2 mt-4">
-             <div className="flex flex-col">
-              <span className="text-gray-900 font-bold text-[11px]">{policy.issueEffective}</span>
-              <span className="text-[9px] text-gray-400 uppercase tracking-tight">Issue Effective</span>
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-[1200px] mx-auto px-4 py-4 space-y-6">
+            {/* Title and date */}
+            <div className="border-b pb-4">
+              <h3 className="text-sm font-bold text-primary mb-1">{policy.name}</h3>
+              <p className="text-[10px] text-gray-400">As of {policy.asOfDate}</p>
+
+              <div className="grid grid-cols-3 gap-2 mt-4">
+                <div className="flex flex-col">
+                  <span className="text-gray-900 font-bold text-[11px]">{policy.issueEffective}</span>
+                  <span className="text-[9px] text-gray-400 uppercase tracking-tight">Issue Effective</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-gray-900 font-bold text-[11px]">{policy.valuationDate}</span>
+                  <span className="text-[9px] text-gray-400 uppercase tracking-tight">Valuation Date</span>
+                </div>
+                <div className="flex flex-col items-end">
+                  <span className="text-blue-700 font-bold text-[11px]">{policy.value}</span>
+                  <span className="text-[9px] text-gray-400 uppercase tracking-tight">Value</span>
+                </div>
+              </div>
             </div>
-            <div className="flex flex-col">
-              <span className="text-gray-900 font-bold text-[11px]">{policy.valuationDate}</span>
-              <span className="text-[9px] text-gray-400 uppercase tracking-tight">Valuation Date</span>
+
+            <div className="sticky top-0 z-10 -mx-4 px-4 bg-white border-b pb-2 pt-2">
+              <div className="inline-flex text-[11px] font-semibold text-gray-600 border border-gray-200">
+                {tabs.map((tab, i) => (
+                  <button
+                    key={tab}
+                    onClick={() => handleTabClick(tab)}
+                    className={cn(
+                      "px-3 py-1.5 transition-colors whitespace-nowrap",
+                      i > 0 && "border-l border-gray-200",
+                      activeTab === tab ? "bg-blue-600 text-white border-blue-600" : "bg-white hover:bg-gray-50"
+                    )}
+                    aria-controls={sectionId(tab)}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="flex flex-col items-end">
-              <span className="text-blue-700 font-bold text-[11px]">{policy.value}</span>
-              <span className="text-[9px] text-gray-400 uppercase tracking-tight">Value</span>
+
+            <div className="space-y-8 pb-6">
+              {tabs.map((tab) => (
+                <section
+                  key={tab}
+                  id={sectionId(tab)}
+                  ref={(el) => (sectionRefs.current[tab] = el)}
+                  className="scroll-mt-24 space-y-3"
+                >
+                  <h4 className="text-sm font-semibold text-gray-900">{tab}</h4>
+                  {tabContent[tab]}
+                </section>
+              ))}
             </div>
           </div>
         </div>
-
-        <div className="border-b pb-2">
-          <div className="inline-flex text-[11px] font-semibold text-gray-600 border border-gray-200">
-            {tabs.map((tab, i) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={cn(
-                  "px-3 py-1.5 transition-colors whitespace-nowrap",
-                  i > 0 && "border-l border-gray-200",
-                  activeTab === tab ? "bg-blue-600 text-white border-blue-600" : "bg-white hover:bg-gray-50"
-                )}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <TabContent activeTab={activeTab} policy={policy} />
-        </div>
-      </div>
 
         <div className="p-4 bg-gray-50 border-t flex justify-end">
-        <button 
-          onClick={onClose}
-          className="px-4 py-1.5 bg-blue-600 text-white text-[11px] font-bold rounded hover:bg-blue-700 transition-colors"
-        >
-          Close
-        </button>
+          <button
+            onClick={onClose}
+            className="px-4 py-1.5 bg-blue-600 text-white text-[11px] font-bold rounded hover:bg-blue-700 transition-colors"
+          >
+            Close
+          </button>
         </div>
       </div>
     </aside>
   );
-};
-
-// ---------- Tab Content Components ----------
-
-const TabContent: React.FC<{ activeTab: string; policy: InsurancePolicy }> = ({ activeTab, policy }) => {
-  switch (activeTab) {
-    case "Chart":
-      return <ChartTab policy={policy} />;
-    case "Income Table":
-      return <IncomeTableTab policy={policy} />;
-    case "Post Activation":
-      return <PostActivationTab policy={policy} />;
-    case "Tax Implications":
-      return <TaxImplicationsTab policy={policy} />;
-    case "Watch Items":
-      return <WatchItemsTab />;
-    case "Annuity Benefits":
-      return <AnnuityBenefitsTab />;
-    case "Full View":
-    default:
-      return <FullViewTab policy={policy} />;
-  }
 };
 
