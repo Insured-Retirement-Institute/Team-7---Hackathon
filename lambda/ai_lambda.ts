@@ -28,19 +28,12 @@ async function get_ai_summary(product_data: string){
     const base_prompt = `
         Give me a summary of this annuity policy using the following structure:
         The {policy name}, a {type of annuity} annuity issued by {issuing company}, is designed to provide {primary annuity objective}. The contract includes {key benefits and features specific to this annuity}.
-        Only return the paragraph structured like example, with no location data.
+        Only return the paragraph structured like example.
     `;
-
-    // const example_response = {
-    //     "summary":"The summary here.."
-    // }
-
-    //const final_prompt = base_prompt.replace('{{ example_response }}', JSON.stringify(example_response));
-    const final_prompt = base_prompt;
 
     const conversation: Message[] = [
         { role: "user", content: [{ text: product_data }] },
-        { role: "user", content: [{ text: final_prompt }] }
+        { role: "user", content: [{ text: base_prompt }] }
     ];
 
       const command = new ConverseCommand({
@@ -108,15 +101,16 @@ async function get_ai_watch_items(product_data: string){
       return JSON.parse(cleanJson(response_text));
 }
 
-export async function handler(event: APIGatewayProxyEvent, context: Context) {
-    try {
-        console.log(event.body);
-        const event_body = JSON.parse(event.body || "");
+interface AIRequest {
+    product: string;
+}
 
-        const product = event_body.product;
+export async function handler(event: AIRequest, context: Context) {
+    try {
+        const product = JSON.parse(event.product || "");
 
         if (!product) {
-            return { statusCode: 400, body: JSON.stringify("Product data provided") };
+            return { statusCode: 400, body: JSON.stringify("No product data provided") };
         }
 
         const ai_summary = await get_ai_summary(product);
