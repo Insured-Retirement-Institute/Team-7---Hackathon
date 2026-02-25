@@ -4,7 +4,7 @@ import {
   aws_lambda, 
   aws_s3, 
   aws_s3_deployment,
-  pipelines
+  aws_secretsmanager,
 } from 'aws-cdk-lib';
 import * as cdk from 'aws-cdk-lib/core';
 import { Construct } from 'constructs';
@@ -35,6 +35,15 @@ export class AwsWebStack extends cdk.Stack {
     });
     const funcRole = func.role;
     funcRole?.addManagedPolicy(aws_iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonBedrockFullAccess")); //might want something more targeted later.
+
+    const beaconFunc = new aws_lambda.Function(this, "beaconLambda", {
+      runtime: aws_lambda.Runtime.NODEJS_LATEST,
+      code: aws_lambda.Code.fromAsset('./dist/beaconLambda'),
+      handler: 'beaconLambda.handler'
+    });
+    //shared existing secret, not created new for each branch
+    const beaconSecret = aws_secretsmanager.Secret.fromSecretNameV2(this, "beaconSecret", "apiToken");
+    beaconSecret.grantRead(beaconFunc);
 
     const gateway = new aws_apigateway.RestApi(this, "apiGateway");
     const endpoint = gateway.root.addResource('api');
