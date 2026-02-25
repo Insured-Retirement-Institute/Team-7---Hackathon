@@ -1,5 +1,8 @@
-import React, { useRef, useState } from "react";
-import { X } from "lucide-react";
+import React, { useRef, useState, useEffect } from "react";
+import { ApiResponse } from "@shared/api-types";
+import { X, ExternalLink } from "lucide-react";
+
+const BEACON_REPORT_BASE_URL = "https://placeholder.example.com/beacon-report";
 import { InsurancePolicy } from "@shared/mock-data";
 import { cn } from "@/lib/utils";
 import { ChartTab } from "@/components/dashboard/tabs/ChartTab";
@@ -22,6 +25,24 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
   const tabs = ["Chart", "Income Table", "Post Activation", "Tax Implications", "Watch Items", "Full View", "Annuity Benefits"] as const;
   type Tab = (typeof tabs)[number];
   const [activeTab, setActiveTab] = useState<Tab>("Chart");
+  const [apiResponse, setApiResponse] = useState<ApiResponse | null>(null);
+
+  useEffect(() => {
+    if (!policy.cusip || !policy.policyDate) {
+      setApiResponse(null);
+      return;
+    }
+    let formattedDate = policy.policyDate;
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(policy.policyDate)) {
+      const [month, day, year] = policy.policyDate.split("/");
+      formattedDate = `${year}-${month}-${day}`;
+    }
+    fetch(`/api/beacon/${policy.cusip}/${formattedDate}`)
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => setApiResponse(data))
+      .catch(() => setApiResponse(null));
+  }, [policy.cusip, policy.policyDate]);
+
   const sectionRefs = useRef<Record<Tab, HTMLElement | null>>({
     Chart: null,
     "Income Table": null,
@@ -50,7 +71,7 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
     "Tax Implications": <TaxImplicationsTab policy={policy} />,
     "Watch Items": <WatchItemsTab />,
     "Full View": <FullViewTab policy={policy} />,
-    "Annuity Benefits": <AnnuityBenefitsTab />,
+    "Annuity Benefits": <AnnuityBenefitsTab beaconData={apiResponse?.beaconReport} />,
   };
 
   return (
@@ -82,7 +103,20 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
           <div className="max-w-[1200px] mx-auto px-4 py-4 space-y-6">
             {/* Title and date */}
             <div className="border-b pb-4">
-              <h3 className="text-sm font-bold text-primary mb-1">{policy.name}</h3>
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="text-sm font-bold text-primary">{policy.name}</h3>
+                {policy.cusip && policy.policyDate && (
+                  <a
+                    href={`${BEACON_REPORT_BASE_URL}?cusip=${policy.cusip}&policyDate=${policy.policyDate}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 px-3 py-1 text-[11px] font-semibold text-blue-600 border border-blue-200 rounded hover:bg-blue-50 transition-colors"
+                  >
+                    Full Report
+                    <ExternalLink size={11} />
+                  </a>
+                )}
+              </div>
               <p className="text-[10px] text-gray-400">As of {policy.asOfDate}</p>
 
               <div className="grid grid-cols-3 gap-2 mt-4">
@@ -100,6 +134,13 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
                 </div>
               </div>
             </div>
+
+            {apiResponse?.summary && (
+              <div className="bg-blue-50 border border-blue-100 rounded px-4 py-3 text-[11px] text-gray-700 leading-relaxed">
+                <span className="block text-[9px] font-semibold uppercase tracking-wider text-blue-500 mb-1">Summary</span>
+                {apiResponse.summary}
+              </div>
+            )}
 
             <div className="sticky top-0 z-10 -mx-4 px-4 bg-white border-b pb-2 pt-2">
               <div className="inline-flex text-[11px] font-semibold text-gray-600 border border-gray-200">

@@ -1,5 +1,5 @@
 import { RequestHandler } from "express";
-import { getApiResponse } from "@shared/data-provider";
+import { getApiResponse } from "../../shared/data-provider";
 
 export const handleBeacon: RequestHandler = (req, res) => {
   const { cusip, policyDate } = req.params;

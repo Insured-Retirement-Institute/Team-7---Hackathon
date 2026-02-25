@@ -1,21 +1,10 @@
 import fs from "fs";
 import path from "path";
+import { ApiResponse } from "./api-types";
 
 interface ApiRequest {
   cusip: string;
   policyDate: string;
-}
-
-interface WatchItem {
-  priority: number;
-  title: string;
-  description: string;
-}
-
-export interface ApiResponse {
-  summary: string;
-  watchItems: Array<WatchItem>;
-  beaconReport: any;
 }
 
 function normalizeDate(policyDate: string): string {
