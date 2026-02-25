@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { ApiResponse } from "@shared/api-types";
 import { X, ExternalLink } from "lucide-react";
 
@@ -26,6 +26,15 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState<Tab>("Chart");
   const [apiResponse, setApiResponse] = useState<ApiResponse | null>(null);
   const [annuitySidebar, setAnnuitySidebar] = useState<React.ReactNode | null>(null);
+  const [chartData, setChartData] = useState<unknown[]>([]);
+
+  const handleSidebarChange = useCallback((sidebar: React.ReactNode | null) => {
+    setAnnuitySidebar((prev) => (prev === sidebar ? prev : sidebar));
+  }, []);
+
+  const handleChartDataChange = useCallback((data: unknown[]) => {
+    setChartData(data);
+  }, []);
 
   useEffect(() => {
     if (!policy.cusip || !policy.policyDate) {
@@ -36,6 +45,8 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
     if (/^\d{2}\/\d{2}\/\d{4}$/.test(policy.policyDate)) {
       const [month, day, year] = policy.policyDate.split("/");
       formattedDate = `${year}-${month}-${day}`;
+    } else if (/^\d{4}\/\d{2}\/\d{2}$/.test(policy.policyDate)) {
+      formattedDate = policy.policyDate.replace(/\//g, "-");
     }
     fetch(`/api/beacon/${policy.cusip}/${formattedDate}`)
       .then((res) => res.ok ? res.json() : null)
@@ -65,7 +76,7 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
   };
 
   const tabContent: Record<Tab, React.ReactNode> = {
-    Chart: <ChartTab policy={policy} />,
+    Chart: <ChartTab policy={policy} sidebar={annuitySidebar} chartData={chartData} />,
     "Income Table": <IncomeTableTab policy={policy} />,
     "Post Activation": <PostActivationTab policy={policy} />,
     "Tax Implications": <TaxImplicationsTab policy={policy} />,
@@ -74,10 +85,10 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
     "Annuity Benefits": (
       <AnnuityBenefitsTab
         beaconData={apiResponse?.beaconReport}
+        policy={policy}
         sidebarPlacement="external"
-        onSidebarChange={(sidebar) => {
-          setAnnuitySidebar((prev) => (prev === sidebar ? prev : sidebar));
-        }}
+        onSidebarChange={handleSidebarChange}
+        onChartDataChange={handleChartDataChange}
       />
     ),
   };
@@ -183,29 +194,7 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
               </div>
             </div>
 
-            <div className="relative lg:flex lg:items-start lg:gap-6 pb-6">
-              <div className="flex-1 space-y-8">{renderedSections}</div>
-              {annuitySidebar && (
-                <aside className="hidden lg:block w-[240px] xl:w-[260px] flex-shrink-0 sticky top-16 self-start max-h-[calc(100vh-8rem)] overflow-y-auto">
-                  {annuitySidebar}
-                </aside>
-              )}
-            </div>
-
-            {annuitySidebar && (
-              <div className="lg:hidden mt-4">{annuitySidebar}</div>
-            )}
-
-            {/* Hidden mount keeps the sidebar rendered even when the tab is not active */}
-            <div className="hidden" aria-hidden>
-              <AnnuityBenefitsTab
-                beaconData={apiResponse?.beaconReport}
-                sidebarPlacement="external"
-                onSidebarChange={(sidebar) => {
-                  setAnnuitySidebar((prev) => (prev === sidebar ? prev : sidebar));
-                }}
-              />
-            </div>
+            <div className="space-y-8 pb-6">{renderedSections}</div>
           </div>
         </div>
 
