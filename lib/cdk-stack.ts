@@ -9,6 +9,7 @@ import {
   pipelines,
 } from 'aws-cdk-lib';
 import * as cdk from 'aws-cdk-lib/core';
+import { Cors } from 'aws-cdk-lib/aws-apigateway';
 import { Construct } from 'constructs';
 
 export class AwsWebStack extends cdk.Stack {
@@ -50,7 +51,14 @@ export class AwsWebStack extends cdk.Stack {
     beaconSecret.grantRead(beaconFunc);
     beaconFunc.role?.addManagedPolicy(aws_iam.ManagedPolicy.fromAwsManagedPolicyName("SecretsManagerReadWrite"));
 
-    const gateway = new aws_apigateway.RestApi(this, `${this.stackName.toLocaleLowerCase()}-apiGateway`);
+    const gateway = new aws_apigateway.RestApi(this, `${this.stackName.toLocaleLowerCase()}-apiGateway`, {
+      defaultCorsPreflightOptions: {
+        allowOrigins: Cors.ALL_ORIGINS, // Equivalent to ['*']
+        allowMethods: Cors.ALL_METHODS, // ['OPTIONS', 'GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD']
+        allowHeaders: Cors.DEFAULT_HEADERS, // A set of standard headers
+        allowCredentials: true, // Optional
+      },
+    });
     const apiEndpoint = gateway.root.addResource('api');
 
     const endpoint = gateway.root.addResource('ai');
