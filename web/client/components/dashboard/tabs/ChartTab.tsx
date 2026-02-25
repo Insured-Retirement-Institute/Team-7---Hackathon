@@ -16,26 +16,50 @@ export const ChartTab: React.FC<{ policy?: InsurancePolicy }> = ({ policy }) => 
     <div className="mt-4 bg-white border rounded p-4">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Accumulation vs Fees</h4>
-          <p className="text-[11px] text-gray-500">Stacked bar of account value and annual fees</p>
+          <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Accumulation, Fees, and Income</h4>
+          <p className="text-[11px] text-gray-500">Stacked bars with fees and income on top of net accumulation</p>
         </div>
         {policy ? <span className="text-[11px] text-gray-600 font-semibold">{policy.name}</span> : null}
       </div>
 
       <div className="bg-gray-50 border rounded p-3 h-96">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 8, right: 16, left: 4, bottom: 8 }}>
+          <BarChart data={chartData} margin={{ top: 8, right: 16, left: 4, bottom: 28 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-            <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+            <XAxis dataKey="year" height={56} tickMargin={6} tick={<CustomXAxisTick data={chartData} />} />
             <YAxis tickFormatter={formatCompact} tick={{ fontSize: 10 }} width={56} domain={[0, "auto"]} />
             <Tooltip formatter={tooltipFormatter} labelFormatter={(label) => `Year ${label}`} />
             <Legend wrapperStyle={{ fontSize: 11 }} />
             <Bar dataKey="netAccumValue" stackId="value" fill="#3b82f6" name="Accum (net of fees)" />
             <Bar dataKey="fee" stackId="value" fill="#f97316" name="Fees" />
+            <Bar dataKey="income" stackId="value" fill="#10b981" name="Income" />
           </BarChart>
         </ResponsiveContainer>
       </div>
     </div>
+  );
+};
+
+const CustomXAxisTick: React.FC<{ x?: number; y?: number; payload?: any; data: typeof policyProjection }> = ({ x = 0, y = 0, payload, data }) => {
+  const datum = data[payload?.index ?? 0];
+  const eventsLabel = Array.isArray(datum?.events) && datum.events.length > 0 ? datum.events.map((event) => event.toUpperCase()).join(" • ") : "";
+
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text textAnchor="middle" fill="#111827" fontSize={10} dy={6}>
+        <tspan x={0} dy="4">
+          {payload?.value}
+        </tspan>
+        <tspan x={0} dy="12" fill="#6b7280">
+          {datum.age ?? "--"}
+        </tspan>
+        {eventsLabel ? (
+          <tspan x={0} dy="12" fill="#2563eb">
+            {eventsLabel}
+          </tspan>
+        ) : null}
+      </text>
+    </g>
   );
 };
 
@@ -44,6 +68,7 @@ function formatCompact(value: number) {
 }
 
 function tooltipFormatter(value: number, name: string) {
-  const label = name === "netAccumValue" ? "Accum (net of fees)" : name === "fee" ? "Fees" : name;
+  const label =
+    name === "netAccumValue" ? "Accum (net of fees)" : name === "fee" ? "Fees" : name === "income" ? "Income" : name;
   return [value.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 }), label];
 }
