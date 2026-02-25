@@ -9,7 +9,7 @@ export async function handler(event: APIGatewayProxyEvent, context: Context) {
         return makeResponse(400, 'Request missing cusip');
     }
     const cusip = event.multiValueQueryStringParameters.cusip;
-    if(!event.pathParameters?.policyDate) {
+    if(!event.multiValueQueryStringParameters?.policyDate) {
         return makeResponse(400, 'Request missing policyDate');
     }
     const policyDate = event.multiValueQueryStringParameters.policyDate;
