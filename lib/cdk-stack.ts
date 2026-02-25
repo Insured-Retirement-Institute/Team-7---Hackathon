@@ -48,7 +48,7 @@ export class AwsWebStack extends cdk.Stack {
     beaconSecret.grantRead(beaconFunc);
     beaconFunc.role?.addManagedPolicy(aws_iam.ManagedPolicy.fromAwsManagedPolicyName("SecretsManagerReadWrite"));
 
-    const gateway = new aws_apigateway.RestApi(this, "apiGateway");
+    const gateway = new aws_apigateway.RestApi(this, `${this.stackName.toLocaleLowerCase()}-apiGateway`);
     const apiEndpoint = gateway.root.addResource('api');
     const method = apiEndpoint.addMethod('GET', new aws_apigateway.LambdaIntegration(func));
     const beaconEndpoint = apiEndpoint.addResource('beacon');
