@@ -5,14 +5,14 @@ const API_URL = "https://stage-profile.an.annuitynexus.com/api/profile";
 export async function handler(event: APIGatewayProxyEvent, context: Context) {
     //make sure request is complete
     console.log(event);
-    if(!event.pathParameters?.cusip){
+    if(!event.multiValueQueryStringParameters?.cusip){
         return makeResponse(400, 'Request missing cusip');
     }
-    const cusip = event.pathParameters.cusip;
+    const cusip = event.multiValueQueryStringParameters.cusip;
     if(!event.pathParameters?.policyDate) {
         return makeResponse(400, 'Request missing policyDate');
     }
-    const policyDate = event.pathParameters.policyDate;
+    const policyDate = event.multiValueQueryStringParameters.policyDate;
     //get beacon creds from secret
     const secretClient = new SecretsManagerClient({
         region: "us-east-1"
