@@ -35,17 +35,9 @@ export function RightSidebar({
 
   return (
     <div style={{ background: C.white, borderLeft: `1px solid ${C.border}`, display: "flex", flexDirection: "column", minHeight: "100%" }}>
-      {/* Client block */}
-      <div style={{ padding: "14px 16px", borderBottom: `1px solid ${C.border}` }}>
-        <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.12em", color: C.textLight, marginBottom: 6 }}>Client View</div>
-        <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>The Rogers Household</div>
-        <div style={{ fontSize: 10, color: C.textLight, marginTop: 2 }}>DOB 11/01/1962 · Age 63</div>
-        <div style={{ fontSize: 10, color: C.textLight }}>Policy Date 11/01/2022</div>
-      </div>
-
-			{/* Optimal activation */}
+			{/* Optimal Income activation */}
       <div style={{ padding: "12px 16px", background: C.accentLight, borderBottom: `1px solid ${C.border}` }}>
-        <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.12em", color: C.accent, marginBottom: 4 }}>Optimal Activation</div>
+        <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.12em", color: C.accent, marginBottom: 4 }}>Suggested Income Activation</div>
         <div style={{ fontSize: 24, fontWeight: 700, color: C.accent }}>Age {optimalAge}</div>
         <div style={{ fontSize: 10, color: C.textMid, marginTop: 2 }}>Band {getMawpBand(optimalAge, riderParams.mawpTable)} · {formatPercent(getMawpRate(optimalAge, riderParams.mawpTable))} MAWP</div>
         <div style={{ fontSize: 10, color: C.green, fontWeight: 600, marginTop: 4 }}>+{formatCurrency(gain)} vs. activating today</div>

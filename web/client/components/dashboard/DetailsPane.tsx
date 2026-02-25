@@ -186,7 +186,7 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
             <div className="relative lg:flex lg:items-start lg:gap-6 pb-6">
               <div className="flex-1 space-y-8">{renderedSections}</div>
               {annuitySidebar && (
-                <aside className="hidden lg:block w-[240px] xl:w-[260px] flex-shrink-0 sticky top-16 self-start">
+                <aside className="hidden lg:block w-[240px] xl:w-[260px] flex-shrink-0 sticky top-16 self-start max-h-[calc(100vh-8rem)] overflow-y-auto">
                   {annuitySidebar}
                 </aside>
               )}
