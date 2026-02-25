@@ -24,6 +24,7 @@ export const AnnuityBenefitsTab: React.FC<Props> = ({ beaconData, policy, sideba
   return (
     <div className="w-full">
       <AnnuityBenefitsViz
+        key={policy?.id}
         preloadedData={beaconData}
         policy={policy}
         sidebarPlacement={sidebarPlacement}

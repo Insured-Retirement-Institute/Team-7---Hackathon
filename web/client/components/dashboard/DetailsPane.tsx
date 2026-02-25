@@ -28,6 +28,15 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
   const [annuitySidebar, setAnnuitySidebar] = useState<React.ReactNode | null>(null);
   const [chartData, setChartData] = useState<unknown[]>([]);
 
+  useEffect(() => {
+    if (!isOpen) {
+      setActiveTab("Chart");
+      setApiResponse(null);
+      setAnnuitySidebar(null);
+      setChartData([]);
+    }
+  }, [isOpen]);
+
   const handleSidebarChange = useCallback((sidebar: React.ReactNode | null) => {
     setAnnuitySidebar((prev) => (prev === sidebar ? prev : sidebar));
   }, []);
@@ -37,8 +46,8 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
   }, []);
 
   useEffect(() => {
+    setApiResponse(null);
     if (!policy.cusip || !policy.policyDate) {
-      setApiResponse(null);
       return;
     }
     let formattedDate = policy.policyDate;
