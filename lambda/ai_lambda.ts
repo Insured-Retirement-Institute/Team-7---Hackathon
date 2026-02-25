@@ -1,4 +1,4 @@
-import { Context } from "aws-lambda";
+import { APIGatewayProxyEvent, Context } from "aws-lambda";
 import { BedrockRuntimeClient, ConverseCommand, ConverseCommandOutput, Message } from "@aws-sdk/client-bedrock-runtime";
 
 const brt = new BedrockRuntimeClient({ region: "us-east-1" });
@@ -144,12 +144,20 @@ async function get_ai_watch_items(product_data: string) {
 async function get_ai_categorize_annuity(product_data: string) {
 
     const base_prompt = `
-        Categorize this annuity product into one of the following categories:
+        Using the following
+        - These products would be considered a Growth annuity: [Variable Annuity, RILA, FIA]
+        - These products would be considered a Protection annuity: [FIA, MYGA, RILA]
+        - These products would be considered an Income annuity: [Any with an income rider, SPIA]
+        - These products would be considered a Legacy annuity: [Any with a death benefit]
+
+        Categorize this annuity product into the following applicable categories:
         - Growth
         - Protection
         - Income
         - Legacy
-        Return only the category name nothing else. Do not explain your answer or how you got to it.
+
+        Return in follwoing example format: ["Growth", "Income", "Legacy"] 
+        Do not explain your answer or how you got to it.
     `;
 
     const conversation: Message[] = [
@@ -176,16 +184,14 @@ async function get_ai_categorize_annuity(product_data: string) {
         return "";
     }
 
-    return response_text.trim();
+    return JSON.parse(cleanJson(response_text));
 }
 
-interface AIRequest {
-    product: string;
-}
-
-export async function handler(event: AIRequest, context: Context) {
+export async function handler(event: APIGatewayProxyEvent, context: Context) {
     try {
-        const product = JSON.parse(event.product || "");
+        const body = JSON.parse(event.body || "");
+
+        const product = body.product;
 
         if (!product) {
             return { statusCode: 400, body: JSON.stringify("No product data provided") };
