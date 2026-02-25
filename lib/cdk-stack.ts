@@ -31,7 +31,7 @@ export class AwsWebStack extends cdk.Stack {
     const func = new aws_lambda.Function( this, "functionName", {
       runtime: aws_lambda.Runtime.NODEJS_LATEST,
       code: aws_lambda.Code.fromAsset('./dist/lambda'),
-      handler: 'lambda.handler'
+      handler: 'ai_lambda.handler'
     });
     const funcRole = func.role;
     funcRole?.addManagedPolicy(aws_iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonBedrockFullAccess")); //might want something more targeted later.
