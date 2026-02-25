@@ -25,6 +25,7 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
   type Tab = (typeof tabs)[number];
   const [activeTab, setActiveTab] = useState<Tab>("Chart");
   const [apiResponse, setApiResponse] = useState<ApiResponse | null>(null);
+  const [annuitySidebar, setAnnuitySidebar] = useState<React.ReactNode | null>(null);
 
   useEffect(() => {
     if (!policy.cusip || !policy.policyDate) {
@@ -70,8 +71,30 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
     "Tax Implications": <TaxImplicationsTab policy={policy} />,
     "Watch Items": <WatchItemsTab />,
     "Full View": <FullViewTab policy={policy} />,
-    "Annuity Benefits": <AnnuityBenefitsTab beaconData={apiResponse?.beaconReport} />,
+    "Annuity Benefits": (
+      <AnnuityBenefitsTab
+        beaconData={apiResponse?.beaconReport}
+        sidebarPlacement="external"
+        onSidebarChange={(sidebar) => {
+          setAnnuitySidebar((prev) => (prev === sidebar ? prev : sidebar));
+        }}
+      />
+    ),
   };
+
+  const renderedSections = tabs.map((tab) => (
+    <section
+      key={tab}
+      id={sectionId(tab)}
+      ref={(el) => (sectionRefs.current[tab] = el)}
+      className="scroll-mt-24 space-y-3"
+    >
+      <h4 className="text-sm font-semibold text-gray-900">{tab}</h4>
+      {tabContent[tab]}
+    </section>
+  ));
+
+  // Keep the sidebar node cached even when other tabs are active; we hide it via layout conditions.
 
   return (
     <aside
@@ -160,18 +183,28 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
               </div>
             </div>
 
-            <div className="space-y-8 pb-6">
-              {tabs.map((tab) => (
-                <section
-                  key={tab}
-                  id={sectionId(tab)}
-                  ref={(el) => (sectionRefs.current[tab] = el)}
-                  className="scroll-mt-24 space-y-3"
-                >
-                  <h4 className="text-sm font-semibold text-gray-900">{tab}</h4>
-                  {tabContent[tab]}
-                </section>
-              ))}
+            <div className="relative lg:flex lg:items-start lg:gap-6 pb-6">
+              <div className="flex-1 space-y-8">{renderedSections}</div>
+              {annuitySidebar && (
+                <aside className="hidden lg:block w-[240px] xl:w-[260px] flex-shrink-0 sticky top-16 self-start">
+                  {annuitySidebar}
+                </aside>
+              )}
+            </div>
+
+            {annuitySidebar && (
+              <div className="lg:hidden mt-4">{annuitySidebar}</div>
+            )}
+
+            {/* Hidden mount keeps the sidebar rendered even when the tab is not active */}
+            <div className="hidden" aria-hidden>
+              <AnnuityBenefitsTab
+                beaconData={apiResponse?.beaconReport}
+                sidebarPlacement="external"
+                onSidebarChange={(sidebar) => {
+                  setAnnuitySidebar((prev) => (prev === sidebar ? prev : sidebar));
+                }}
+              />
             </div>
           </div>
         </div>
