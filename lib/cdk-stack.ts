@@ -6,6 +6,7 @@ import {
   aws_s3_deployment,
   aws_secretsmanager,
   Duration,
+  pipelines,
 } from 'aws-cdk-lib';
 import * as cdk from 'aws-cdk-lib/core';
 import { Construct } from 'constructs';
@@ -29,12 +30,13 @@ export class AwsWebStack extends cdk.Stack {
       destinationBucket: bucket
     });
 
-    const func = new aws_lambda.Function( this, "functionName", {
+    const aiFunc = new aws_lambda.Function( this, "aiLambda", {
       runtime: aws_lambda.Runtime.NODEJS_LATEST,
       code: aws_lambda.Code.fromAsset('./dist/lambda'),
-      handler: 'ai_lambda.handler'
+      handler: 'ai_lambda.handler',
+      timeout: Duration.seconds(60),
     });
-    const funcRole = func.role;
+    const funcRole = aiFunc.role;
     funcRole?.addManagedPolicy(aws_iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonBedrockFullAccess")); //might want something more targeted later.
 
     const beaconFunc = new aws_lambda.Function(this, "beaconLambda", {
@@ -50,9 +52,12 @@ export class AwsWebStack extends cdk.Stack {
 
     const gateway = new aws_apigateway.RestApi(this, `${this.stackName.toLocaleLowerCase()}-apiGateway`);
     const apiEndpoint = gateway.root.addResource('api');
-    const method = apiEndpoint.addMethod('GET', new aws_apigateway.LambdaIntegration(func));
+
+    const endpoint = gateway.root.addResource('ai');
+    const method = endpoint.addMethod('POST', new aws_apigateway.LambdaIntegration(aiFunc));
+
     const beaconEndpoint = apiEndpoint.addResource('beacon');
     const beaconMethod = beaconEndpoint.addMethod('GET', new aws_apigateway.LambdaIntegration(beaconFunc));
-    
+
   }
 }
