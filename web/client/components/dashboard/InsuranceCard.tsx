@@ -88,7 +88,7 @@ export const InsuranceCard: React.FC<Props> = ({ policy, isSelected, onSelect, o
           </div>
           <div className="flex justify-between">
             <span className="text-gray-400">Income Rider</span>
-            <span className="text-gray-700 font-medium">{policy.incomeSw ? "on" : "off"}</span>
+            <span className="text-gray-700 font-medium">{policy.incomeSw ? "ON" : "OFF"}</span>
           </div>
         </div>
       </div>

@@ -141,7 +141,7 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
               </div>
               <p className="text-[10px] text-gray-400">As of {policy.asOfDate}</p>
 
-              <div className="grid grid-cols-3 gap-2 mt-4">
+              <div className="grid grid-cols-4 gap-2 mt-4">
                 <div className="flex flex-col">
                   <span className="text-gray-900 font-bold text-[11px]">{policy.issueEffective}</span>
                   <span className="text-[9px] text-gray-400 uppercase tracking-tight">Issue Effective</span>
@@ -149,6 +149,10 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
                 <div className="flex flex-col">
                   <span className="text-gray-900 font-bold text-[11px]">{policy.valuationDate}</span>
                   <span className="text-[9px] text-gray-400 uppercase tracking-tight">Valuation Date</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-gray-900 font-bold text-[11px]">{policy.incomeSw ? "ON" : "OFF"}</span>
+                  <span className="text-[9px] text-gray-400 uppercase tracking-tight">Income Rider</span>
                 </div>
                 <div className="flex flex-col items-end">
                   <span className="text-blue-700 font-bold text-[11px]">{policy.value}</span>
