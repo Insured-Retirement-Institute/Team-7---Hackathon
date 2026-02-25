@@ -61,12 +61,12 @@ function extractApiCatalog(raw) {
         const mawpCases = cases.filter((c) =>
           c.isCaseAOrC === "A" && c.notes &&
           (c.notes.includes("MAWA") || c.notes.includes("MAWP")) &&
-          c.notes.match(new RegExp(`(?:Income\s+)?Option\s+${num}`, "i"))
+          c.notes.match(new RegExp(`(?:Income\\s+)?Option\\s+${num}`, "i"))
         );
         const pipCases = cases.filter((c) =>
           c.isCaseAOrC === "A" && c.notes &&
           c.notes.includes("PIP") &&
-          c.notes.match(new RegExp(`(?:Income\s+)?Option\s+${num}`, "i"))
+          c.notes.match(new RegExp(`(?:Income\\s+)?Option\\s+${num}`, "i"))
         );
         optionTables[opt] = {
           mawpTable: mawpCases.length ? buildT(mawpCases) : FALLBACK_PARAMS.mawpTable,
