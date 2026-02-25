@@ -15,7 +15,7 @@ const FALLBACK_PARAMS = {
   mawpTable: [
     { minAge: 45, maxAge: 59, single: 0.0505, joint: 0.0505 },
     { minAge: 60, maxAge: 64, single: 0.0610, joint: 0.0610 },
-    { minAge: 65, maxAge: 69, single: 0.0900, joint: 0.0900 },
+    { minAge: 65, maxAge: 69, single: 0.0900, joint: 0.0900 },an
     { minAge: 70, maxAge: 74, single: 0.0925, joint: 0.0925 },
     { minAge: 75, maxAge: 99, single: 0.0935, joint: 0.0935 },
   ],

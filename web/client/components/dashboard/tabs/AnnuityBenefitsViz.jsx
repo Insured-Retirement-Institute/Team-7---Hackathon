@@ -316,7 +316,7 @@ const tabs = [
   { id: "detail", label: "Full Analysis" },
 ];
 
-export default function AnnuityBenefitsViz({ embedTab } = {}) {
+export default function AnnuityBenefitsViz({ embedTab, preloadedData } = {}) {
   const [activeTab, setActiveTab] = useState(embedTab || "overview");
   const displayTab = embedTab || activeTab;
   const [growthRate, setGrowthRate] = useState(5.2);
@@ -363,7 +363,26 @@ export default function AnnuityBenefitsViz({ embedTab } = {}) {
     }
   }, [apiCatalog, selectedRider, selectedOption]);
 
-  useEffect(() => { fetchApiData(); }, [fetchApiData]);
+  useEffect(() => {
+    if (preloadedData) {
+      const catalog = extractApiCatalog(preloadedData);
+      if (catalog && catalog.riders.length) {
+        const defaultRider = catalog.riders.find((r) => r.name.toLowerCase().includes("income max")) || catalog.riders[0];
+        const defaultOption = defaultRider.incomeOptions[0];
+        setApiCatalog(catalog);
+        setSelectedRider(defaultRider.name);
+        setSelectedOption(defaultOption);
+        setRiderParams(buildRiderParams(catalog, defaultRider.name, defaultOption));
+        setApiStatus("success");
+      } else {
+        setRiderParams({ ...FALLBACK_PARAMS, fromApi: false });
+        setApiStatus("partial");
+      }
+      setLastFetched(new Date());
+    } else {
+      fetchApiData();
+    }
+  }, [preloadedData, fetchApiData]);
 
   const model = useMemo(() => runModel({
     growth: growthRate / 100, lifeExp, taxRate: taxRate / 100,

@@ -1,13 +1,13 @@
-import React from "react";
-import { ExternalLink, TrendingUp, ShieldCheck, CircleDollarSign, Umbrella } from "lucide-react";
+import React, { useState } from "react";
+import { ExternalLink, TrendingUp, ShieldCheck, CircleDollarSign, TreeDeciduous } from "lucide-react";
 import { InsurancePolicy } from "@shared/mock-data";
 import { cn } from "@/lib/utils";
 
 const benefits = [
-  { Icon: TrendingUp, label: "Growth", activeColor: "text-emerald-600", key: "growth" },
-  { Icon: ShieldCheck, label: "Protection", activeColor: "text-blue-600", key: "principalProtection" },
-  { Icon: CircleDollarSign, label: "Income", activeColor: "text-violet-600", key: "income" },
-  { Icon: Umbrella, label: "Death Benefit", activeColor: "text-rose-500", key: "deathBenefit" },
+  { Icon: TrendingUp, label: "Growth", activeColor: "text-emerald-600", activeFill: "", key: "growth" },
+  { Icon: ShieldCheck, label: "Protection", activeColor: "text-blue-600", activeFill: "", key: "principalProtection" },
+  { Icon: CircleDollarSign, label: "Income", activeColor: "text-violet-600", activeFill: "", key: "income" },
+  { Icon: TreeDeciduous, label: "Legacy", activeColor: "text-green-800", activeFill: "fill-green-600", key: "deathBenefit" },
 ] as const;
 
 interface Props {
@@ -97,11 +97,11 @@ export const InsuranceCard: React.FC<Props> = ({ policy, isSelected, onSelect, o
 
       {/* Benefit icons */}
       <div className="flex-1 flex items-center justify-between px-4 py-3">
-        {benefits.map(({ Icon, label, activeColor, key }) => {
+        {benefits.map(({ Icon, label, activeColor, activeFill, key }) => {
           const active = policy.benefits?.[key] ?? false;
           return (
             <div key={label} className="flex flex-col items-center gap-0.5">
-              <Icon size={18} className={active ? activeColor : "text-gray-300"} />
+              <Icon size={18} className={active ? cn(activeColor, activeFill) : "text-gray-300"} />
               <span className={cn("text-[8px] uppercase tracking-tight leading-none", active ? "text-gray-400" : "text-gray-300")}>
                 {label}
               </span>
