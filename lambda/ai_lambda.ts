@@ -5,8 +5,35 @@ const brt = new BedrockRuntimeClient({ region: "us-east-1" });
 
 const model = {
     model_id: "global.anthropic.claude-sonnet-4-5-20250929-v1:0",
-    max_tokens: 120000
+    max_tokens: 64000
 };
+
+function calc_max_tokens(
+    modelMaxTokens: number,
+    conversation: Message[]
+): number {
+    const CHARS_PER_TOKEN = 4;
+    const METADATA_PADDING = 3; // Accounts for internal message delimiters (<|role|>, etc.)
+
+    let totalChars = 0;
+
+    for (const message of conversation) {
+        if (Array.isArray(message.content)) {
+            for (const contentItem of message.content) {
+                if (contentItem && "text" in contentItem) {
+                    const text = contentItem.text ?? "";
+                    // Rough estimation: 1 token per 4 characters
+                    totalChars += text.length;
+                    totalChars += (METADATA_PADDING * CHARS_PER_TOKEN);
+                }
+            }
+        }
+    }
+
+    const estimatedTokens = Math.ceil(totalChars / CHARS_PER_TOKEN);
+
+    return Math.max(1000, modelMaxTokens - estimatedTokens);
+}
 
 function cleanJson(jsonString: string): string {
     // Remove the leading and trailing ```json and ``` markers
@@ -40,7 +67,8 @@ async function get_ai_summary(product_data: string) {
         modelId: model.model_id,
         messages: conversation,
         inferenceConfig: {
-            maxTokens: 32000,
+            //maxTokens: 32000,
+            maxTokens: calc_max_tokens(model.max_tokens, conversation),
             temperature: 0.5,
             //topP: 0.9
         }
@@ -60,22 +88,26 @@ async function get_ai_summary(product_data: string) {
 async function get_ai_watch_items(product_data: string) {
 
     const base_prompt = `
-        You are a bot with expertice knowledge in annuities and how to provide important info about them. Following task:
-        - Analyze this provided json data to find import features that I would like to know. 
-        - Items to watch for in this product
-        - Use clear langauge that any average person can understand.
-        - Order the items by importance, with the most important item first.
-        Return in following example response:
-        {{ example_response }}
-        Do not explain what you did or how you got your response.
+            Can you give me a short list of the key takeaways that include both benefits and gotchas with the 
+            annuity data provided. Give eachkey takeaway a ranking between low, medium, and high in relation to 
+            criticality to an investor and then only return the ones ranked the highest.
+            Return in following example response:
+            {{ example_response }}
+            Do not explain what you did or how you got your response.
         `;
+
+    enum WatchItemRanking {
+        LOW = "low",
+        MEDIUM = "medium",
+        HIGH = "high"
+    }
 
     const example_response = {
         "watch_items": [
             {
                 "title": "Rider Review",
                 "description": "Check quarterly adjustmets.",
-                "priority": 10
+                "ranking": WatchItemRanking.LOW
             }
         ]
     }
@@ -91,7 +123,8 @@ async function get_ai_watch_items(product_data: string) {
         modelId: model.model_id,
         messages: conversation,
         inferenceConfig: {
-            maxTokens: 32000,
+            //maxTokens: 32000,
+            maxTokens: calc_max_tokens(model.max_tokens, conversation),
             temperature: 0.6,
             //topP: 0.9
         }
@@ -128,7 +161,8 @@ async function get_ai_categorize_annuity(product_data: string) {
         modelId: model.model_id,
         messages: conversation,
         inferenceConfig: {
-            maxTokens: 32000,
+            //maxTokens: 32000,
+            maxTokens: calc_max_tokens(model.max_tokens, conversation),
             temperature: 0.6,
             //topP: 0.9
         }
