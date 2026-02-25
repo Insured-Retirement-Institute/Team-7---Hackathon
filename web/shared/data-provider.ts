@@ -1,5 +1,3 @@
-import fs from "fs";
-import path from "path";
 import { ApiResponse } from "./api-types";
 
 interface ApiRequest {
@@ -16,16 +14,22 @@ function normalizeDate(policyDate: string): string {
   return policyDate;
 }
 
-export function getApiResponse(cusip: string, policyDate: string): ApiResponse {
+export async function getApiResponse(cusip: string, policyDate: string): Promise<ApiResponse> {
   const formattedDate = normalizeDate(policyDate);
-  const fileName = `beacon-${cusip}-${formattedDate}.json`;
-  const filePath = path.resolve(process.cwd(), "../data", fileName);
+  const url = new URL(
+    "https://mi3se4bxrc.execute-api.us-east-1.amazonaws.com/prod/api/beacon"
+  );
 
-  if (!fs.existsSync(filePath)) {
-    throw new Error(`Beacon file not found: ${fileName}`);
+  url.searchParams.set("cusip", cusip);
+  url.searchParams.set("policyDate", formattedDate);
+
+  const response = await fetch(url.toString());
+
+  if (!response.ok) {
+    throw new Error(`Beacon API request failed (${response.status})`);
   }
 
-  const raw = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+  const raw = await response.json();
 
   return {
     summary: raw.summary,
