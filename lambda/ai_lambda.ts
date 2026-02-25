@@ -1,30 +1,42 @@
 import { APIGatewayProxyEvent, Context } from "aws-lambda";
-import { BedrockRuntimeClient, ConverseCommand, ConverseCommandInput, ConverseCommandOutput, Message  } from "@aws-sdk/client-bedrock-runtime";
+import { BedrockRuntimeClient, ConverseCommand, ConverseCommandOutput, Message  } from "@aws-sdk/client-bedrock-runtime";
 
 const brt = new BedrockRuntimeClient({ region: "us-east-1" });
+
 const model = {
-    model_id: "anthropic.claude-opus-4-5-20251101-v1:0",
+    model_id: "global.anthropic.claude-sonnet-4-5-20250929-v1:0",
     max_tokens: 120000
+};
+
+function cleanJson(jsonString: string): string {
+    // Remove the leading and trailing ```json and ``` markers
+    if (jsonString.startsWith("```json")) {
+      jsonString = jsonString.slice(7);
+    }
+    if (jsonString.endsWith("```")) {
+      jsonString = jsonString.slice(0, -3);
+    }
+  
+    // Remove any leading/trailing whitespace
+    jsonString = jsonString.trim();
+  
+    return jsonString;
 }
 
 async function get_ai_summary(product_data: string){
 
     const base_prompt = `
-        You are a bot with expertice knowledge in annuities and how to provide important info about them. Following task:
-        - Analyze this provided json data to find import features that I would like to know. 
-        - Summarize your findings in a well thought our response. 
-        - Use clear langauge that any average person can understand.
-        - Return only a summary in few most important areas of importance in paragraphs
-        Return in following example response:
-        {{ example_response }}
-        Do not explain what you did or how you got your response.
-        `;
+        Give me a summary of this annuity policy using the following structure:
+        The {policy name}, a {type of annuity} annuity issued by {issuing company}, is designed to provide {primary annuity objective}. The contract includes {key benefits and features specific to this annuity}.
+        Only return the paragraph structured like example, with no location data.
+    `;
 
-    const example_response = {
-        "summary":"The summary here.."
-    }
+    // const example_response = {
+    //     "summary":"The summary here.."
+    // }
 
-    const final_prompt = base_prompt.replace('{{ example_response }}', JSON.stringify(example_response));
+    //const final_prompt = base_prompt.replace('{{ example_response }}', JSON.stringify(example_response));
+    const final_prompt = base_prompt;
 
     const conversation: Message[] = [
         { role: "user", content: [{ text: product_data }] },
@@ -35,9 +47,9 @@ async function get_ai_summary(product_data: string){
         modelId: model.model_id,
         messages: conversation,
         inferenceConfig: {
-          maxTokens: 12000,
-          temperature: 0.6,
-          topP: 0.9
+          maxTokens: 32000,
+          temperature: 0.5,
+          //topP: 0.9
         }
       });
   
@@ -49,7 +61,7 @@ async function get_ai_summary(product_data: string){
         return "";
       }
 
-      return JSON.parse(response_text);
+      return response_text;
 }
 
 async function get_ai_watch_items(product_data: string){
@@ -79,9 +91,9 @@ async function get_ai_watch_items(product_data: string){
         modelId: model.model_id,
         messages: conversation,
         inferenceConfig: {
-          maxTokens: 12000,
+          maxTokens: 32000,
           temperature: 0.6,
-          topP: 0.9
+          //topP: 0.9
         }
       });
   
@@ -93,8 +105,7 @@ async function get_ai_watch_items(product_data: string){
         return "";
       }
 
-
-      return JSON.parse(response_text);
+      return JSON.parse(cleanJson(response_text));
 }
 
 export async function handler(event: APIGatewayProxyEvent, context: Context) {
