@@ -1,10 +1,14 @@
 import React from "react";
 import AnnuityBenefitsViz from "./AnnuityBenefitsViz";
 
-export const AnnuityBenefitsTab: React.FC = () => {
+interface Props {
+  beaconData?: unknown;
+}
+
+export const AnnuityBenefitsTab: React.FC<Props> = ({ beaconData }) => {
   return (
     <div className="w-full">
-      <AnnuityBenefitsViz />
+      <AnnuityBenefitsViz preloadedData={beaconData} />
     </div>
   );
 };

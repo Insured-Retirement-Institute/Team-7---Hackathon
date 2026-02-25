@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { InsurancePolicy } from "@shared/mock-data";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,26 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
   const tabs = ["Chart", "Income Table", "Post Activation", "Tax Implications", "Watch Items", "Full View", "Annuity Benefits"] as const;
   type Tab = (typeof tabs)[number];
   const [activeTab, setActiveTab] = useState<Tab>("Chart");
+  const [beaconData, setBeaconData] = useState<unknown>(null);
+
+  useEffect(() => {
+    if (!policy.cusip || !policy.policyDate) {
+      setBeaconData(null);
+      return;
+    }
+
+    // Convert MM/DD/YYYY → YYYY-MM-DD for the API call
+    let formattedDate = policy.policyDate;
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(policy.policyDate)) {
+      const [month, day, year] = policy.policyDate.split("/");
+      formattedDate = `${year}-${month}-${day}`;
+    }
+
+    fetch(`/api/beacon/${policy.cusip}/${formattedDate}`)
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => setBeaconData(data))
+      .catch(() => setBeaconData(null));
+  }, [policy.cusip, policy.policyDate]);
 
   return (
     <aside
@@ -54,7 +74,7 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
         <div className="border-b pb-4">
           <h3 className="text-sm font-bold text-primary mb-1">{policy.name}</h3>
           <p className="text-[10px] text-gray-400">As of {policy.asOfDate}</p>
-          
+
           <div className="grid grid-cols-3 gap-2 mt-4">
              <div className="flex flex-col">
               <span className="text-gray-900 font-bold text-[11px]">{policy.issueEffective}</span>
@@ -89,12 +109,12 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
           </div>
         </div>
 
-        <TabContent activeTab={activeTab} policy={policy} />
+        <TabContent activeTab={activeTab} policy={policy} beaconData={beaconData} />
         </div>
       </div>
 
         <div className="p-4 bg-gray-50 border-t flex justify-end">
-        <button 
+        <button
           onClick={onClose}
           className="px-4 py-1.5 bg-blue-600 text-white text-[11px] font-bold rounded hover:bg-blue-700 transition-colors"
         >
@@ -108,7 +128,7 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
 
 // ---------- Tab Content Components ----------
 
-const TabContent: React.FC<{ activeTab: string; policy: InsurancePolicy }> = ({ activeTab, policy }) => {
+const TabContent: React.FC<{ activeTab: string; policy: InsurancePolicy; beaconData: unknown }> = ({ activeTab, policy, beaconData }) => {
   switch (activeTab) {
     case "Chart":
       return <ChartTab policy={policy} />;
@@ -121,10 +141,9 @@ const TabContent: React.FC<{ activeTab: string; policy: InsurancePolicy }> = ({ 
     case "Watch Items":
       return <WatchItemsTab />;
     case "Annuity Benefits":
-      return <AnnuityBenefitsTab />;
+      return <AnnuityBenefitsTab beaconData={beaconData} />;
     case "Full View":
     default:
       return <FullViewTab policy={policy} />;
   }
 };
-

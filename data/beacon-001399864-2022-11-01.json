@@ -1,4 +1,23 @@
 {
+  "summary": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse molestie magna quis efficitur luctus. Cras semper enim elit, sit amet egestas ante pellentesque ac. Suspendisse vitae vulputate nunc. Sed malesuada eros vitae pulvinar interdum. Integer euismod, quam eget pharetra tincidunt, nisi justo suscipit ante, quis consectetur risus felis vel felis. Mauris neque sapien, tincidunt et varius ut, efficitur ac justo. Sed suscipit tellus nec odio auctor, ut porta diam imperdiet. Integer faucibus vel neque ac aliquet. Pellentesque viverra et magna ac tempus. Suspendisse pretium porttitor nisl, vel maximus mauris cursus et. Praesent vel mi facilisis, porta tortor sit amet, efficitur nunc. Praesent at commodo dui. Integer tristique placerat purus, sit amet interdum metus varius sit amet. Sed suscipit sollicitudin velit, eget vulputate nibh malesuada a. Ut nec leo nibh.",
+  "watchItems": [
+    {
+      "priority": 1,
+      "title": "Rider review",
+      "description": "Check quarterly adjustments"
+    },
+    {
+      "priority": 2,
+      "title": "Beneficiary update",
+      "description": "Confirm latest filing"
+    },
+    {
+      "priority": 3,
+      "title": "Fee audit",
+      "description": "Compare custodian statements"
+    }
+  ],
+  "beaconData": {
     "productId": 2704,
     "originalProductId": 2704,
     "cusip": 1399864,
@@ -184,7 +203,9 @@
           "logo1": "\\CompanyLogo\\127_logo1.png",
           "logo2": "\\CompanyLogo\\127_logo2.png",
           "lastModifiedUser": null,
-          "vaProducts": [null]
+          "vaProducts": [
+            null
+          ]
         },
         "lastModifiedUser": null,
         "newVaGmwbs": [],
@@ -204,7 +225,9 @@
             "premiumType": {
               "id": 2,
               "premiumType": "Flexible",
-              "vaPremiumTypeInters": [null]
+              "vaPremiumTypeInters": [
+                null
+              ]
             },
             "product": null
           }
@@ -1006,7 +1029,9 @@
                 "id": 2,
                 "shareClassName": "Class B",
                 "className": "B",
-                "vaChargeCases": [null]
+                "vaChargeCases": [
+                  null
+                ]
               },
               "vaChargeCdscWaiverInters": [
                 {
@@ -1071,7 +1096,9 @@
                 "id": 4,
                 "shareClassName": "Class L",
                 "className": "L",
-                "vaChargeCases": [null]
+                "vaChargeCases": [
+                  null
+                ]
               },
               "vaChargeCdscWaiverInters": [
                 {
@@ -1141,7 +1168,9 @@
               "premiumTaxType": {
                 "id": 1,
                 "text": "Annuitization",
-                "vaPremiumTaxDueInters": [null]
+                "vaPremiumTaxDueInters": [
+                  null
+                ]
               }
             },
             {
@@ -1152,7 +1181,9 @@
               "premiumTaxType": {
                 "id": 2,
                 "text": "Surrender",
-                "vaPremiumTaxDueInters": [null]
+                "vaPremiumTaxDueInters": [
+                  null
+                ]
               }
             },
             {
@@ -1163,7 +1194,9 @@
               "premiumTaxType": {
                 "id": 5,
                 "text": "As per individual state laws",
-                "vaPremiumTaxDueInters": [null]
+                "vaPremiumTaxDueInters": [
+                  null
+                ]
               }
             }
           ]
@@ -9956,7 +9989,9 @@
               "vaProductPlanAvailabilities": [],
               "vaSchdTransSysWithdrawals": [],
               "vaSupplementDates": [],
-              "vaTransactionTransfers": [null]
+              "vaTransactionTransfers": [
+                null
+              ]
             },
             "vaWithdrawals": [
               {
@@ -10196,3 +10231,4 @@
       }
     }
   }
+}
