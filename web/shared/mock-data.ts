@@ -74,7 +74,7 @@ export const policies: InsurancePolicy[] = [
     clientAge: 61,
     maturityDate: "11/1/2054",
     receivedDate: "10/15/2019",
-    benefits: { growth: true, principalProtection: false, income: true, deathBenefit: true },
+    benefits: { growth: false, principalProtection: false, income: true, deathBenefit: false },
     contractDetails: {
       totalContractAmount: "$208,940",
       netDeathBenefit: "$215,200",
@@ -113,7 +113,7 @@ export const policies: InsurancePolicy[] = [
     clientAge: 63,
     maturityDate: "11/1/2054",
     receivedDate: "10/15/2019",
-    benefits: { growth: true, principalProtection: false, income: true, deathBenefit: true },
+    benefits: { growth: false, principalProtection: false, income: true, deathBenefit: false },
     contractDetails: {
       totalContractAmount: "$211,664",
       netDeathBenefit: "$220,508",
