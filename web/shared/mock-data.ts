@@ -7,6 +7,7 @@ export interface InsurancePolicy {
   issueEffective: string;
   valuationDate: string;
   value: string;
+  incomeSw: boolean;
   contractNumber: string;
   issuer: string;
   productType: string;
@@ -60,6 +61,7 @@ export const policies: InsurancePolicy[] = [
     issueEffective: "11/1/2019",
     valuationDate: "11/1/2022",
     value: "$211,664",
+    incomeSw: true,
     contractNumber: "PPL001399864",
     issuer: "American General Life Insurance Co.",
     productType: "Variable Annuity",
@@ -97,6 +99,7 @@ export const policies: InsurancePolicy[] = [
     issueEffective: "--",
     valuationDate: "--",
     value: "$775,104",
+    incomeSw: false,
     contractNumber: "1111111111",
     issuer: "Allianz",
     productType: "Indexed Annuity",
@@ -116,6 +119,7 @@ export const policies: InsurancePolicy[] = [
     issueEffective: "4/5/2022",
     valuationDate: "--",
     value: "$110,316",
+    incomeSw: true,
     contractNumber: "2222222222",
     issuer: "Midland",
     productType: "Fixed Annuity",
@@ -135,6 +139,7 @@ export const policies: InsurancePolicy[] = [
     issueEffective: "--",
     valuationDate: "--",
     value: "$678,984",
+    incomeSw: false,
     contractNumber: "VAR097824DS",
     issuer: "--",
     productType: "--",
@@ -154,6 +159,7 @@ export const policies: InsurancePolicy[] = [
     issueEffective: "4/8/2002",
     valuationDate: "11/6/2023",
     value: "$0",
+    incomeSw: true,
     contractNumber: "INSURANCET1",
     issuer: "Western Natio",
     productType: "Fixed Annuity",
@@ -173,6 +179,7 @@ export const policies: InsurancePolicy[] = [
     issueEffective: "6/7/2021",
     valuationDate: "--",
     value: "$147,054",
+    incomeSw: false,
     contractNumber: "333333333",
     issuer: "Security Benefit",
     productType: "Variable Annuity",
@@ -210,6 +217,7 @@ export const policies: InsurancePolicy[] = [
     issueEffective: "5/19/2010",
     valuationDate: "--",
     value: "$2,718",
+    incomeSw: true,
     contractNumber: "INSURANCE3",
     issuer: "MetLife",
     productType: "Variable Annuity",
@@ -246,15 +254,15 @@ export const projectionSeed: Array<Omit<PolicyProjectionPoint, "accumValue" | "f
   { year: 2026, age: 68, events: [], income: 0 },
   { year: 2027, age: 69, events: [], income: 0 },
   { year: 2028, age: 70, events: ["income"], income: 6000 },
-  { year: 2029, age: 71, events: [], income: 6000 },
-  { year: 2030, age: 72, events: ["rmd"], income: 6000 },
-  { year: 2031, age: 73, events: [], income: 6000 },
-  { year: 2032, age: 74, events: [], income: 6000 },
-  { year: 2033, age: 75, events: [], income: 6000 },
-  { year: 2034, age: 76, events: [], income: 6000 },
-  { year: 2035, age: 77, events: [], income: 6000 },
-  { year: 2036, age: 78, events: [], income: 6000 },
-  { year: 2037, age: 79, events: ["EOL"], income: 6000 },
+  { year: 2029, age: 71, events: [], income: 10000 },
+  { year: 2030, age: 72, events: ["rmd"], income: 12000 },
+  { year: 2031, age: 73, events: [], income: 18000 },
+  { year: 2032, age: 74, events: [], income: 20000 },
+  { year: 2033, age: 75, events: [], income: 23000 },
+  { year: 2034, age: 76, events: [], income: 25000 },
+  { year: 2035, age: 77, events: [], income: 26000 },
+  { year: 2036, age: 78, events: [], income: 30000 },
+  { year: 2037, age: 79, events: ["EOL"], income: 31000 },
 ];
 
 const growthRates = [
@@ -285,7 +293,8 @@ export const policyProjection: PolicyProjectionPoint[] = (() => {
       if (income === 0 && (seed.income ?? 0) > 0) {
         income = seed.income ?? 0; // start income when it first appears
       }
-      income = income > 0 ? Math.round(income * (1 + rate)) : 0;
+      const incomeRateBump = 0.07; // modest boost over asset growth
+      income = income > 0 ? Math.round(income * (1 + rate + incomeRateBump)) : 0;
     }
 
     rows.push({

@@ -86,6 +86,10 @@ export const InsuranceCard: React.FC<Props> = ({ policy, isSelected, onSelect, o
             <span className="text-gray-400">Net Death Benefit</span>
             <span className="text-gray-700 font-medium">{policy.netDeathBenefit}</span>
           </div>
+          <div className="flex justify-between">
+            <span className="text-gray-400">Income Rider</span>
+            <span className="text-gray-700 font-medium">{policy.incomeSw ? "on" : "off"}</span>
+          </div>
         </div>
       </div>
 
