@@ -5,18 +5,14 @@ const API_URL = "https://stage-profile.an.annuitynexus.com/api/profile";
 export async function handler(event: APIGatewayProxyEvent, context: Context) {
     //make sure request is complete
     console.log(event);
-    if(!event.body){
-        return makeResponse(400, 'Request missing body');
-    }
-    const body = JSON.parse(event.body);
-    if(!body.cusip){
+    if(!event.pathParameters?.cusip){
         return makeResponse(400, 'Request missing cusip');
     }
-    const cusip = body.cusip;
-    if(!body.policyDate) {
+    const cusip = event.pathParameters.cusip;
+    if(!event.pathParameters?.policyDate) {
         return makeResponse(400, 'Request missing policyDate');
     }
-    const policyDate = body.policyDate;
+    const policyDate = event.pathParameters.policyDate;
     //get beacon creds from secret
     const secretClient = new SecretsManagerClient({
         region: "us-east-1"
@@ -34,24 +30,18 @@ export async function handler(event: APIGatewayProxyEvent, context: Context) {
     }
     
     //send beacon request and return
-    console.log(secretResponse.SecretString);
     let beaconResponse;
     try {
-        const fullPath = `${API_URL}?token=${JSON.parse(secretResponse.SecretString || '').apiToken}&cusip=${cusip}&policyDate=${policyDate}`
-        console.log(fullPath);
-        await fetch(fullPath)
-        .then(response => {
-            console.log(response);
-            if (!response.ok){
-                throw new Error;
-            }
-            beaconResponse = response.text();
-        })
-        .catch(error => {
-            throw new Error;
-        });
+        const fullPath = `${API_URL}?token=${JSON.parse(secretResponse.SecretString || '').apiToken}&cusip=${cusip}&policyDate=${policyDate}`;
+        const response = await fetch(fullPath);
+        if(!response.ok){
+            const err = await response.text();
+            console.log("Error fetching data from beacon", response.status, err);
+            return makeResponse(response.status, "Error fetching data from beacon");
+        }
+        const responseText = await response.text();
         console.log(beaconResponse);
-        return makeResponse(200, JSON.stringify(beaconResponse));
+        return makeResponse(200, responseText);
     } catch (error) {
         return makeResponse(500, "Error fetching data from beacon.")
     }
