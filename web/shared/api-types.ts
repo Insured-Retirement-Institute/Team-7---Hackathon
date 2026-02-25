@@ -8,4 +8,5 @@ export interface ApiResponse {
   summary: string;
   watchItems: Array<WatchItem>;
   beaconReport: any;
+  beaconReportLink?: string;
 }

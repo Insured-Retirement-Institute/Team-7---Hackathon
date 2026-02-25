@@ -31,5 +31,6 @@ export function getApiResponse(cusip: string, policyDate: string): ApiResponse {
     summary: raw.summary,
     watchItems: raw.watchItems ?? [],
     beaconReport: raw.beaconData ?? null,
+    beaconReportLink: raw.beaconReportLink ?? null,
   };
 }

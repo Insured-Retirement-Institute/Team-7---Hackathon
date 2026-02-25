@@ -17,10 +17,11 @@
       "description": "Compare custodian statements"
     }
   ],
+  "beaconReportLink": "https://stage-profile.an.annuitynexus.com/?token=xpdhwqifofnlkdnqbksurbcaldheqj&cusip=001399864&policydate=2022-11-17",
   "beaconData": {
     "productId": 2704,
     "originalProductId": 2704,
-    "cusip": 1399864,
+    "cusip": "001399864",
     "policyDate": null,
     "basicInfo": {
       "vaProduct": {

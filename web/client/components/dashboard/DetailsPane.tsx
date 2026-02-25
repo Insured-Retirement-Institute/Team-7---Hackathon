@@ -2,7 +2,6 @@ import React, { useRef, useState, useEffect } from "react";
 import { ApiResponse } from "@shared/api-types";
 import { X, ExternalLink } from "lucide-react";
 
-const BEACON_REPORT_BASE_URL = "https://placeholder.example.com/beacon-report";
 import { InsurancePolicy } from "@shared/mock-data";
 import { cn } from "@/lib/utils";
 import { ChartTab } from "@/components/dashboard/tabs/ChartTab";
@@ -105,14 +104,14 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
             <div className="border-b pb-4">
               <div className="flex items-center justify-between mb-1">
                 <h3 className="text-sm font-bold text-primary">{policy.name}</h3>
-                {policy.cusip && policy.policyDate && (
+                {apiResponse?.beaconReportLink && (
                   <a
-                    href={`${BEACON_REPORT_BASE_URL}?cusip=${policy.cusip}&policyDate=${policy.policyDate}`}
+                    href={apiResponse.beaconReportLink}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 px-3 py-1 text-[11px] font-semibold text-blue-600 border border-blue-200 rounded hover:bg-blue-50 transition-colors"
                   >
-                    Full Report
+                    Full Beacon Report
                     <ExternalLink size={11} />
                   </a>
                 )}
