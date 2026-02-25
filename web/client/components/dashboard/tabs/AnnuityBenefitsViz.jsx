@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, ReferenceLine } from "recharts";
+import { RightSidebar } from "./RightSidebar";
 
 // ─── API Configuration ───
 const API_URL = "https://stage-profile.an.annuitynexus.com/api/profile?token=xpdhwqifofnlkdnqbksurbcaldheqj&cusip=001399864&policydate=2022-11-01";
@@ -15,7 +16,7 @@ const FALLBACK_PARAMS = {
   mawpTable: [
     { minAge: 45, maxAge: 59, single: 0.0505, joint: 0.0505 },
     { minAge: 60, maxAge: 64, single: 0.0610, joint: 0.0610 },
-    { minAge: 65, maxAge: 69, single: 0.0900, joint: 0.0900 },an
+    { minAge: 65, maxAge: 69, single: 0.0900, joint: 0.0900 },
     { minAge: 70, maxAge: 74, single: 0.0925, joint: 0.0925 },
     { minAge: 75, maxAge: 99, single: 0.0935, joint: 0.0935 },
   ],
@@ -316,8 +317,9 @@ const tabs = [
   { id: "detail", label: "Full Analysis" },
 ];
 
-export default function AnnuityBenefitsViz() {
-  const [activeTab, setActiveTab] = useState("overview");
+export default function AnnuityBenefitsViz({ embedTab, preloadedData, sidebarPlacement = "inline", onSidebarChange } = {}) {
+  const [activeTab, setActiveTab] = useState(embedTab || "overview");
+  const displayTab = embedTab || activeTab;
   const [growthRate, setGrowthRate] = useState(5.2);
   const [lifeExp, setLifeExp] = useState(85);
   const [taxRate, setTaxRate] = useState(24);
@@ -362,7 +364,26 @@ export default function AnnuityBenefitsViz() {
     }
   }, [apiCatalog, selectedRider, selectedOption]);
 
-  useEffect(() => { fetchApiData(); }, [fetchApiData]);
+  useEffect(() => {
+    if (preloadedData) {
+      const catalog = extractApiCatalog(preloadedData);
+      if (catalog && catalog.riders.length) {
+        const defaultRider = catalog.riders.find((r) => r.name.toLowerCase().includes("income max")) || catalog.riders[0];
+        const defaultOption = defaultRider.incomeOptions[0];
+        setApiCatalog(catalog);
+        setSelectedRider(defaultRider.name);
+        setSelectedOption(defaultOption);
+        setRiderParams(buildRiderParams(catalog, defaultRider.name, defaultOption));
+        setApiStatus("success");
+      } else {
+        setRiderParams({ ...FALLBACK_PARAMS, fromApi: false });
+        setApiStatus("partial");
+      }
+      setLastFetched(new Date());
+    } else {
+      fetchApiData();
+    }
+  }, [preloadedData, fetchApiData]);
 
   const model = useMemo(() => runModel({
     growth: growthRate / 100, lifeExp, taxRate: taxRate / 100,
@@ -379,6 +400,135 @@ export default function AnnuityBenefitsViz() {
 
   const statusDot = { idle: "#8896a8", loading: "#d97706", success: "#2d7a4e", partial: "#d97706", error: "#dc2626" }[apiStatus];
   const statusText = { idle: "Not loaded", loading: "Fetching…", success: "Live", partial: "Defaults", error: "Error" }[apiStatus];
+
+  const sidebar = useMemo(() => (
+    <RightSidebar
+      colors={C}
+      apiCatalog={apiCatalog}
+      selectedRider={selectedRider}
+      selectedOption={selectedOption}
+      onSelectRider={setSelectedRider}
+      onSelectOption={setSelectedOption}
+      riderParams={riderParams}
+      growthRate={growthRate}
+      lifeExp={lifeExp}
+      taxRate={taxRate}
+      setGrowthRate={setGrowthRate}
+      setLifeExp={setLifeExp}
+      setTaxRate={setTaxRate}
+      contractYear={CONTRACT_YR}
+      costBasis={COST_BASIS}
+      currentAV={currentAV}
+      initialBenefitBase={INIT_BB}
+      optimalAge={optAge}
+      gain={gain}
+      optimalScenario={optS}
+      tabs={tabs}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      formatCurrency={fmt}
+      formatPercent={pct}
+      getMawpBand={getMawpBand}
+      getMawpRate={getMawpRate}
+    />
+  ), [apiCatalog, selectedRider, selectedOption, riderParams, growthRate, lifeExp, taxRate, currentAV, optAge, gain, optS, activeTab]);
+
+  useEffect(() => {
+    if (sidebarPlacement === "external" && onSidebarChange) {
+      onSidebarChange(sidebar);
+    } else if (onSidebarChange) {
+      onSidebarChange(null);
+    }
+  }, [sidebarPlacement, onSidebarChange, sidebar]);
+
+  if (embedTab) {
+    return (
+      <div style={{ fontFamily: "-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif", background: C.bg, color: C.text, padding: 16 }}>
+        <style>{`.row-hover:hover { background: ${C.accentLight} !important; } .fade-in { animation: fadeIn 0.2s ease; } @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }`}</style>
+        {embedTab === "income" && (
+          <div className="fade-in">
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
+              {[
+                ["Activation Age", `Age ${optAge}`, C.accent],
+                ["Annual MAWP Income", fmt(optS.mawpIncome), C.green],
+                ["AV Depletes", optS.depletesAtAge ? `Age ${optS.depletesAtAge}` : "Never", optS.depletesAtAge ? C.red : C.green],
+                ["Total Lifetime Income", fmt(optS.grandTotal), C.accent],
+              ].map(([l, v, vc], i) => (
+                <Card key={i} style={{ padding: "11px 13px" }}>
+                  <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.1em", color: C.textLight, marginBottom: 5 }}>{l}</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: vc }}>{v}</div>
+                </Card>
+              ))}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+              <Card>
+                <CardHeader title="Lifetime Income by Activation Age" subtitle={`MAWP + PIP · projected through age ${lifeExp}`} />
+                <div style={{ padding: "12px 4px 8px" }}>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={scenarioData} barCategoryGap="18%">
+                      <CartesianGrid strokeDasharray="2 3" stroke={C.borderLight} vertical={false} />
+                      <XAxis dataKey="age" tick={{ fill: C.textLight, fontSize: 9 }} axisLine={{ stroke: C.border }} tickLine={false} />
+                      <YAxis tick={{ fill: C.textLight, fontSize: 9 }} axisLine={false} tickLine={false} tickFormatter={fmtK} />
+                      <Tooltip content={<Tooltip_ />} />
+                      <Bar dataKey="mawp" stackId="a" name="MAWP">{scenarioData.map((d, i) => <Cell key={i} fill={d.isOpt ? C.chartGreen : "#c6e6d0"} />)}</Bar>
+                      <Bar dataKey="pip" stackId="a" name="PIP" radius={[2, 2, 0, 0]}>{scenarioData.map((d, i) => <Cell key={i} fill={d.isOpt ? C.chartRed : "#fecaca"} />)}</Bar>
+                      <ReferenceLine x={optAge} stroke={C.accent} strokeDasharray="3 3" strokeWidth={1.5} label={{ value: "Optimal", position: "top", fill: C.accent, fontSize: 9 }} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </Card>
+              <Card>
+                <CardHeader title="Annual Income & Account Value" subtitle={`From activation age ${optAge} · ${growthRate}% growth assumption`} />
+                <div style={{ padding: "12px 4px 8px" }}>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <AreaChart data={incomeData}>
+                      <defs>
+                        <linearGradient id="avG2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.chartBlue} stopOpacity={0.15} /><stop offset="100%" stopColor={C.chartBlue} stopOpacity={0.02} /></linearGradient>
+                        <linearGradient id="mG2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.chartGreen} stopOpacity={0.3} /><stop offset="100%" stopColor={C.chartGreen} stopOpacity={0.02} /></linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="2 3" stroke={C.borderLight} vertical={false} />
+                      <XAxis dataKey="age" tick={{ fill: C.textLight, fontSize: 9 }} axisLine={{ stroke: C.border }} tickLine={false} />
+                      <YAxis tick={{ fill: C.textLight, fontSize: 9 }} axisLine={false} tickLine={false} tickFormatter={fmtK} />
+                      <Tooltip content={<Tooltip_ />} />
+                      <Area type="monotone" dataKey="av" name="Account Value" stroke={C.chartBlue} fill="url(#avG2)" strokeWidth={1.5} />
+                      <Area type="stepAfter" dataKey="mawp" name="MAWP" stroke={C.chartGreen} fill="url(#mG2)" strokeWidth={1.5} />
+                      <Area type="stepAfter" dataKey="pip" name="PIP" stroke={C.chartRed} fill="none" strokeWidth={1.5} strokeDasharray="4 2" />
+                      {optS.depletesAtAge && <ReferenceLine x={optS.depletesAtAge} stroke={C.chartRed} strokeDasharray="4 2" label={{ value: "AV Depletes", position: "insideTopRight", fill: C.red, fontSize: 9 }} />}
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </Card>
+            </div>
+            <Card>
+              <CardHeader title="Post-Activation Detail" subtitle={`Activation at age ${optAge} · year-by-year`} />
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+                  <thead>
+                    <tr style={{ background: C.bg }}>
+                      {["Age", "Account Value", "Phase", "Annual Income", "Cumulative Income"].map(h => (
+                        <th key={h} style={{ padding: "7px 12px", textAlign: "right", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.08em", color: C.textLight, fontWeight: 600, borderBottom: `1px solid ${C.border}` }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {postAct.map((r, i) => (
+                      <tr key={r.age} className="row-hover" style={{ borderBottom: `1px solid ${C.borderLight}`, background: i % 2 === 0 ? C.white : "#fafbfc" }}>
+                        <td style={{ padding: "6px 12px", textAlign: "right", color: C.text, fontWeight: 500 }}>{r.age}</td>
+                        <td style={{ padding: "6px 12px", textAlign: "right", color: r.av > 0 ? C.accent : C.red }}>{r.av > 0 ? fmt(r.av) : "$0"}</td>
+                        <td style={{ padding: "6px 12px", textAlign: "right" }}><Pill phase={r.phase} /></td>
+                        <td style={{ padding: "6px 12px", textAlign: "right", color: r.phase === "MAWP" ? C.green : C.red, fontWeight: 500 }}>{fmt(r.income)}</td>
+                        <td style={{ padding: "6px 12px", textAlign: "right", color: C.accent, fontWeight: 600 }}>{fmt(r.cumIncome)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div style={{ fontFamily: "-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif", background: C.bg, minHeight: "100vh", color: C.text }}>
@@ -471,7 +621,7 @@ export default function AnnuityBenefitsViz() {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 220px", minHeight: "calc(100vh - 44px)" }}>
+      <div style={{ display: "grid", gridTemplateColumns: sidebarPlacement === "inline" ? "1fr 220px" : "1fr", minHeight: "calc(100vh - 44px)" }}>
 
         {/* ═══ MAIN CONTENT ═══ */}
         <div style={{ padding: 20, overflowY: "auto" }}>
@@ -900,125 +1050,7 @@ export default function AnnuityBenefitsViz() {
           )}
         </div>
 
-        {/* ═══ RIGHT SIDEBAR ═══ */}
-        <div style={{ background: C.white, borderLeft: `1px solid ${C.border}`, display: "flex", flexDirection: "column" }}>
-          {/* Client block */}
-          <div style={{ padding: "14px 16px", borderBottom: `1px solid ${C.border}` }}>
-            <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.12em", color: C.textLight, marginBottom: 6 }}>Client View</div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>The Rogers Household</div>
-            <div style={{ fontSize: 10, color: C.textLight, marginTop: 2 }}>DOB 11/01/1962 · Age 63</div>
-            <div style={{ fontSize: 10, color: C.textLight }}>Policy Date 11/01/2022</div>
-          </div>
-
-          {/* Rider / Option selector block */}
-          {apiCatalog && (
-            <div style={{ padding: "12px 16px", borderBottom: `1px solid ${C.border}` }}>
-              <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.12em", color: C.textLight, marginBottom: 8 }}>Rider Selection</div>
-
-              <div style={{ marginBottom: 8 }}>
-                <div style={{ fontSize: 9, color: C.textLight, marginBottom: 3 }}>Rider</div>
-                <div style={{ position: "relative" }}>
-                  <select value={selectedRider || ""} onChange={(e) => { setSelectedRider(e.target.value); setSelectedOption(apiCatalog.riders.find(r => r.name === e.target.value)?.incomeOptions[0] || null); }}
-                    style={{ width: "100%", fontSize: 10, padding: "5px 8px", border: `1px solid ${C.border}`, borderRadius: 3, background: C.white, color: C.text, cursor: "pointer", outline: "none", appearance: "none", WebkitAppearance: "none" }}>
-                    {apiCatalog.riders.map((r) => (
-                      <option key={r.name} value={r.name}>{r.name}</option>
-                    ))}
-                  </select>
-                  <span style={{ position: "absolute", right: 7, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", fontSize: 8, color: C.textLight }}>▾</span>
-                </div>
-              </div>
-
-              {apiCatalog.riders.find(r => r.name === selectedRider)?.incomeOptions.length > 1 && (
-                <div>
-                  <div style={{ fontSize: 9, color: C.textLight, marginBottom: 3 }}>Income Option</div>
-                  <div style={{ position: "relative" }}>
-                    <select value={selectedOption || ""} onChange={(e) => setSelectedOption(e.target.value)}
-                      style={{ width: "100%", fontSize: 10, padding: "5px 8px", border: `1px solid ${C.border}`, borderRadius: 3, background: C.white, color: C.text, cursor: "pointer", outline: "none", appearance: "none", WebkitAppearance: "none" }}>
-                      {apiCatalog.riders.find(r => r.name === selectedRider)?.incomeOptions.map((opt) => (
-                        <option key={opt} value={opt}>{opt}</option>
-                      ))}
-                    </select>
-                    <span style={{ position: "absolute", right: 7, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", fontSize: 8, color: C.textLight }}>▾</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Contract info block */}
-          <div style={{ padding: "12px 16px", borderBottom: `1px solid ${C.border}` }}>
-            <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.12em", color: C.textLight, marginBottom: 8 }}>Contract</div>
-            {[
-              ["Contract #", "001399864"],
-              ["Issuer", "AIG / Corebridge"],
-              ["Product Type", "Variable Annuity"],
-              ["Rider", riderParams.riderName],
-              ["Issue Effective", "11/01/2022"],
-              ["Contract Year", CONTRACT_YR],
-            ].map(([l, v], i) => (
-              <div key={i} style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                <span style={{ fontSize: 10, color: C.textLight }}>{l}</span>
-                <span style={{ fontSize: 10, color: C.text, fontWeight: 500, textAlign: "right", maxWidth: 110 }}>{v}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Values block */}
-          <div style={{ padding: "12px 16px", borderBottom: `1px solid ${C.border}` }}>
-            <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.12em", color: C.textLight, marginBottom: 8 }}>Current Values</div>
-            {[
-              ["Total Premium", fmt(COST_BASIS), null],
-              ["Account Value", fmt(currentAV), C.accent],
-              ["Benefit Base", fmt(INIT_BB), C.accent],
-              ["Annual Income", fmt(optS.mawpIncome), C.green],
-            ].map(([l, v, vc], i) => (
-              <div key={i} style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-                <span style={{ fontSize: 10, color: C.textLight }}>{l}</span>
-                <span style={{ fontSize: 11, color: vc || C.text, fontWeight: 600 }}>{v}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Assumptions block */}
-          <div style={{ padding: "12px 16px", borderBottom: `1px solid ${C.border}` }}>
-            <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.12em", color: C.textLight, marginBottom: 8 }}>Assumptions</div>
-            {[
-              { label: "Growth Rate", value: growthRate, set: setGrowthRate, min: 0, max: 10, step: 0.1, unit: "%" },
-              { label: "Life Expectancy", value: lifeExp, set: setLifeExp, min: 75, max: 100, step: 1, unit: " yrs" },
-              { label: "Tax Rate", value: taxRate, set: setTaxRate, min: 10, max: 40, step: 1, unit: "%" },
-            ].map((s, i) => (
-              <div key={i} style={{ marginBottom: 10 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-                  <span style={{ fontSize: 10, color: C.textLight }}>{s.label}</span>
-                  <span style={{ fontSize: 10, fontWeight: 600, color: C.accent }}>{s.value}{s.unit}</span>
-                </div>
-                <input type="range" min={s.min} max={s.max} step={s.step} value={s.value} onChange={(e) => s.set(Number(e.target.value))} />
-              </div>
-            ))}
-          </div>
-
-          {/* Optimal activation */}
-          <div style={{ padding: "12px 16px", background: C.accentLight, borderBottom: `1px solid ${C.border}` }}>
-            <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.12em", color: C.accent, marginBottom: 4 }}>Optimal Activation</div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: C.accent }}>Age {optAge}</div>
-            <div style={{ fontSize: 10, color: C.textMid, marginTop: 2 }}>Band {getMawpBand(optAge, riderParams.mawpTable)} · {pct(getMawpRate(optAge, riderParams.mawpTable))} MAWP</div>
-            <div style={{ fontSize: 10, color: C.green, fontWeight: 600, marginTop: 4 }}>+{fmt(gain)} vs. activating today</div>
-          </div>
-
-          {/* Nav */}
-          <nav style={{ padding: "8px 0", flex: 1 }}>
-            <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.12em", color: C.textLight, padding: "4px 16px 6px" }}>Analysis Views</div>
-            {tabs.map((t) => {
-              const active = activeTab === t.id;
-              return (
-                <button key={t.id} className="tab-btn" onClick={() => setActiveTab(t.id)}
-                  style={{ width: "100%", textAlign: "left", padding: "8px 16px", background: active ? C.accentLight : "none", border: "none", borderLeft: `3px solid ${active ? C.accent : "transparent"}`, cursor: "pointer", fontSize: 11, fontWeight: active ? 600 : 400, color: active ? C.accent : C.textMid, display: "block" }}>
-                  {t.label}
-                </button>
-              );
-            })}
-          </nav>
-        </div>
+        {sidebarPlacement === "inline" && sidebar}
 
       </div>
     </div>

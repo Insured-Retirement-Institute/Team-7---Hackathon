@@ -1,69 +1,74 @@
-import React, { useMemo, useState } from "react";
-import { InsurancePolicy } from "@shared/mock-data";
+import React, { useMemo } from "react";
+import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { InsurancePolicy, policyProjection } from "@shared/mock-data";
 
-type Mode = "declining" | "guaranteed";
-
-export const ChartTab: React.FC<{ policy: InsurancePolicy }> = ({ policy }) => {
-  const [mode, setMode] = useState<Mode>("declining");
-
-  const incomeSeries = useMemo(() => {
-    const years = Array.from({ length: 20 }, (_, i) => i + 1);
-
-    if (mode === "guaranteed") {
-      const annual = 35000;
-      return years.map((year) => ({ year, amount: annual }));
-    }
-
-    const start = 52000;
-    const step = 1800; // decreases each year
-    return years.map((year) => ({ year, amount: Math.max(0, start - step * (year - 1)) }));
-  }, [mode]);
-
-  const maxIncome = Math.max(...incomeSeries.map((d) => d.amount), 1);
+export const ChartTab: React.FC<{ policy?: InsurancePolicy }> = ({ policy }) => {
+  const chartData = useMemo(
+    () =>
+      policyProjection.map((row) => ({
+        ...row,
+        netAccumValue: Math.max(0, row.accumValue - row.fee),
+      })),
+    []
+  );
 
   return (
     <div className="mt-4 bg-white border rounded p-4">
-      <div className="flex items-center justify-between mb-3">
-        <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Projected Income</h4>
-        <div className="flex gap-2 text-[11px] font-semibold">
-          <button
-            onClick={() => setMode("declining")}
-            className={`px-3 py-1 rounded-full transition-colors ${mode === "declining" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
-          >
-            Non-Guaranteed
-          </button>
-          <button
-            onClick={() => setMode("guaranteed")}
-            className={`px-3 py-1 rounded-full transition-colors ${mode === "guaranteed" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
-          >
-            Guaranteed
-          </button>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Accumulation, Fees, and Income</h4>
+          <p className="text-[11px] text-gray-500">Stacked bars with fees and income on top of net accumulation</p>
         </div>
+        {policy ? <span className="text-[11px] text-gray-600 font-semibold">{policy.name}</span> : null}
       </div>
 
-      <div className="bg-gray-50 border rounded p-3">
-        <div className="relative h-56 w-full flex items-end gap-2 pb-4">
-          <div className="absolute inset-x-0 bottom-0 h-px bg-gray-200" />
-          {incomeSeries.map((point) => (
-            <div key={point.year} className="flex-1 h-full flex flex-col items-center gap-1 justify-end">
-              <div
-                className="w-full bg-blue-500 rounded-t shadow-sm"
-                style={{ height: `${Math.max(4, (point.amount / maxIncome) * 100)}%` }}
-                title={`Year ${point.year}: ${formatIncome(point.amount)}`}
-              />
-              <span className="text-[10px] text-gray-500">{point.year}</span>
-            </div>
-          ))}
-        </div>
-        <div className="mt-3 flex justify-between text-[11px] text-gray-600">
-          <span>{mode === "guaranteed" ? "Even income over 20 years" : "Declining income until depletion"}</span>
-          <span className="font-semibold">Policy: {policy.name}</span>
-        </div>
+      <div className="bg-gray-50 border rounded p-3 h-96">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartData} margin={{ top: 8, right: 16, left: 4, bottom: 28 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <XAxis dataKey="year" height={56} tickMargin={6} tick={<CustomXAxisTick data={chartData} />} />
+            <YAxis tickFormatter={formatCompact} tick={{ fontSize: 10 }} width={56} domain={[0, "auto"]} />
+            <Tooltip formatter={tooltipFormatter} labelFormatter={(label) => `Year ${label}`} />
+            <Legend wrapperStyle={{ fontSize: 11 }} />
+            <Bar dataKey="netAccumValue" stackId="value" fill="#3b82f6" name="Accum (net of fees)" />
+            <Bar dataKey="fee" stackId="value" fill="#f97316" name="Fees" />
+            <Bar dataKey="income" stackId="value" fill="#10b981" name="Income" />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );
 };
 
-function formatIncome(value: number) {
-  return value.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+const CustomXAxisTick: React.FC<{ x?: number; y?: number; payload?: any; data: typeof policyProjection }> = ({ x = 0, y = 0, payload, data }) => {
+  const datum = data[payload?.index ?? 0];
+  const eventsLabel = Array.isArray(datum?.events) && datum.events.length > 0 ? datum.events.map((event) => event.toUpperCase()).join(" • ") : "";
+
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text textAnchor="middle" fill="#111827" fontSize={10} dy={6}>
+        <tspan x={0} dy="4">
+          {payload?.value}
+        </tspan>
+        <tspan x={0} dy="12" fill="#6b7280">
+          {datum.age ?? "--"}
+        </tspan>
+        {eventsLabel ? (
+          <tspan x={0} dy="12" fill="#2563eb">
+            {eventsLabel}
+          </tspan>
+        ) : null}
+      </text>
+    </g>
+  );
+};
+
+function formatCompact(value: number) {
+  return value >= 1000 ? `${Math.round(value / 1000)}k` : value.toString();
+}
+
+function tooltipFormatter(value: number, name: string) {
+  const label =
+    name === "netAccumValue" ? "Accum (net of fees)" : name === "fee" ? "Fees" : name === "income" ? "Income" : name;
+  return [value.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 }), label];
 }

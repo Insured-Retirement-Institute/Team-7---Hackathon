@@ -1,7 +1,14 @@
-import React from "react";
-import { ExternalLink } from "lucide-react";
+import React, { useState } from "react";
+import { ExternalLink, TrendingUp, ShieldCheck, CircleDollarSign, TreeDeciduous } from "lucide-react";
 import { InsurancePolicy } from "@shared/mock-data";
 import { cn } from "@/lib/utils";
+
+const benefits = [
+  { Icon: TrendingUp, label: "Growth", activeColor: "text-emerald-600", activeFill: "", key: "growth" },
+  { Icon: ShieldCheck, label: "Protection", activeColor: "text-blue-600", activeFill: "", key: "principalProtection" },
+  { Icon: CircleDollarSign, label: "Income", activeColor: "text-violet-600", activeFill: "", key: "income" },
+  { Icon: TreeDeciduous, label: "Legacy", activeColor: "text-green-800", activeFill: "fill-green-600", key: "deathBenefit" },
+] as const;
 
 interface Props {
   policy: InsurancePolicy;
@@ -12,9 +19,9 @@ interface Props {
 
 export const InsuranceCard: React.FC<Props> = ({ policy, isSelected, onSelect, onViewDetails }) => {
   return (
-    <div 
+    <div
       className={cn(
-        "bg-white border transition-all duration-200 cursor-pointer hover:shadow-md",
+        "bg-white border transition-all duration-200 cursor-pointer hover:shadow-md flex flex-col",
         isSelected ? "border-blue-500 ring-1 ring-blue-500 shadow-sm" : "border-gray-200"
       )}
       onClick={() => onSelect(policy)}
@@ -79,7 +86,28 @@ export const InsuranceCard: React.FC<Props> = ({ policy, isSelected, onSelect, o
             <span className="text-gray-400">Net Death Benefit</span>
             <span className="text-gray-700 font-medium">{policy.netDeathBenefit}</span>
           </div>
+          <div className="flex justify-between">
+            <span className="text-gray-400">Income Rider</span>
+            <span className="text-gray-700 font-medium">{policy.incomeSw ? "ON" : "OFF"}</span>
+          </div>
         </div>
+      </div>
+
+      <div className="border-t border-gray-100 mx-4" />
+
+      {/* Benefit icons */}
+      <div className="flex-1 flex items-center justify-between px-4 py-3">
+        {benefits.map(({ Icon, label, activeColor, activeFill, key }) => {
+          const active = policy.benefits?.[key] ?? false;
+          return (
+            <div key={label} className="flex flex-col items-center gap-0.5">
+              <Icon size={18} className={active ? cn(activeColor, activeFill) : "text-gray-300"} />
+              <span className={cn("text-[8px] uppercase tracking-tight leading-none", active ? "text-gray-400" : "text-gray-300")}>
+                {label}
+              </span>
+            </div>
+          );
+        })}
       </div>
 
       <div className="px-4 py-2 border-t border-gray-100 bg-gray-50/30 flex items-center">
