@@ -194,7 +194,14 @@ export async function handler(event: APIGatewayProxyEvent, context: Context) {
         const product = body.product;
 
         if (!product) {
-            return { statusCode: 400, body: JSON.stringify("No product data provided") };
+            return { 
+                statusCode: 400, 
+                body: JSON.stringify("No product data provided"),
+                headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*', // Required for CORS support
+                },
+            };
         }
 
         const ai_summary = await get_ai_summary(product);
@@ -210,6 +217,10 @@ export async function handler(event: APIGatewayProxyEvent, context: Context) {
         return {
             statusCode: 200,
             body: JSON.stringify(jsonResponse),
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*', // Required for CORS support
+            },
         };
     } catch (error) {
         console.log(error);
