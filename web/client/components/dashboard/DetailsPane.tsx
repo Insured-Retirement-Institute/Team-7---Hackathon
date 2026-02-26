@@ -99,7 +99,7 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
 
   const tabContent: Record<Tab, React.ReactNode> = {
     Chart: <ChartTab policy={policy} sidebar={annuitySidebar} chartData={chartData} />,
-    "Watch Items": <WatchItemsTab />,
+    "Watch Items": <WatchItemsTab response={apiResponse}/>,
     "Full View": <FullViewTab policy={policy} />,
   };
 
