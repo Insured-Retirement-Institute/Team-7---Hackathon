@@ -56,7 +56,7 @@ export class AwsWebStack extends cdk.Stack {
         allowOrigins: Cors.ALL_ORIGINS, // Equivalent to ['*']
         allowMethods: Cors.ALL_METHODS, // ['OPTIONS', 'GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD']
         allowHeaders: Cors.DEFAULT_HEADERS, // A set of standard headers
-        allowCredentials: true, // Optional
+        allowCredentials: false, // Optional
       },
     });
     const apiEndpoint = gateway.root.addResource('api');

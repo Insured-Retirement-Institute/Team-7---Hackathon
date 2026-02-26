@@ -51,6 +51,10 @@ export async function handler(event: APIGatewayProxyEvent, context: Context) {
 export function makeResponse(statusCode: number, message: string){
     return {
         statusCode: statusCode,
-        body: JSON.stringify(message)
+        body: JSON.stringify(message),
+        headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*', // Required for CORS support
+        },
     }
 }
