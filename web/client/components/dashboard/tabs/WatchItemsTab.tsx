@@ -14,7 +14,7 @@ export const WatchItemsTab: React.FC = () => {
     <div className="mt-4 bg-white border rounded p-4">
       <div className="flex items-center justify-between mb-3">
         <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Watch Items</h4>
-        <span className="text-[10px] text-gray-400">Mock list</span>
+        {/* <span className="text-[10px] text-gray-400">Mock list</span> */}
       </div>
       <div className="space-y-2 text-[11px]">
         {sortedWatchItems.map((item) => (

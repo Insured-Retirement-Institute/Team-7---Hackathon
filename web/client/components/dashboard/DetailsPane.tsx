@@ -67,17 +67,13 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
       formattedDate = policy.policyDate.replace(/\//g, "-");
     }
     setIsLoading(true);
-    fetch(`/api/beacon/${policy.cusip}/${formattedDate}`)
-      .then((res) => res.ok ? res.json() : null)
-      .then((data) => setApiResponse(data))
-      .catch(() => setApiResponse(null))
-      .finally(() => setIsLoading(false));
     getApiResponse(policy.cusip, formattedDate)
       .then((data) => setApiResponse(data))
       .catch((err) => {
         console.error("Error fetching beacon data:", err);
         setApiResponse(null);
       })
+      .finally(() => setIsLoading(false));
   }, [policy?.cusip, policy?.policyDate]);
 
   const handleSidebarChange = useCallback((sidebar: React.ReactNode | null) => {
