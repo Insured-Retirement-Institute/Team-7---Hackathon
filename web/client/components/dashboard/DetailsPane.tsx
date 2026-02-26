@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { ApiResponse } from "@shared/api-types";
+
 import { X, ExternalLink } from "lucide-react";
 
 import { InsurancePolicy } from "@shared/mock-data";
@@ -11,6 +12,7 @@ import { TaxImplicationsTab } from "@/components/dashboard/tabs/TaxImplicationsT
 import { WatchItemsTab } from "@/components/dashboard/tabs/WatchItemsTab";
 import { FullViewTab } from "@/components/dashboard/tabs/FullViewTab";
 import { AnnuityBenefitsTab } from "@/components/dashboard/tabs/AnnuityBenefitsTab";
+import { getApiResponse } from "@shared/data-provider";
 
 interface Props {
   policy: InsurancePolicy | null;
@@ -18,36 +20,43 @@ interface Props {
   onClose: () => void;
 }
 
-export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
-  if (!policy) return null;
+const TABS = ["Chart", "Watch Items", "Full View"] as const;
+type Tab = (typeof TABS)[number];
 
-  const tabs = ["Chart", "Income Table", "Post Activation", "Tax Implications", "Watch Items", "Full View", "Annuity Benefits"] as const;
-  type Tab = (typeof tabs)[number];
+export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState<Tab>("Chart");
   const [apiResponse, setApiResponse] = useState<ApiResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [annuitySidebar, setAnnuitySidebar] = useState<React.ReactNode | null>(null);
   const [chartData, setChartData] = useState<unknown[]>([]);
 
+  const sectionRefs = useRef<Record<Tab, HTMLElement | null>>({
+    Chart: null,
+    "Watch Items": null,
+    "Full View": null,
+  });
+
+  // Reset all state when the pane closes
   useEffect(() => {
     if (!isOpen) {
       setActiveTab("Chart");
       setApiResponse(null);
+      setIsLoading(false);
       setAnnuitySidebar(null);
       setChartData([]);
     }
   }, [isOpen]);
 
-  const handleSidebarChange = useCallback((sidebar: React.ReactNode | null) => {
-    setAnnuitySidebar((prev) => (prev === sidebar ? prev : sidebar));
-  }, []);
+  // Clear chart/sidebar state immediately when the selected policy changes
+  useEffect(() => {
+    setChartData([]);
+    setAnnuitySidebar(null);
+  }, [policy?.id]);
 
-  const handleChartDataChange = useCallback((data: unknown[]) => {
-    setChartData(data);
-  }, []);
-
+  // Fetch beacon data whenever the selected policy changes
   useEffect(() => {
     setApiResponse(null);
-    if (!policy.cusip || !policy.policyDate) {
+    if (!policy?.cusip || !policy?.policyDate) {
       return;
     }
     let formattedDate = policy.policyDate;
@@ -57,27 +66,31 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
     } else if (/^\d{4}\/\d{2}\/\d{2}$/.test(policy.policyDate)) {
       formattedDate = policy.policyDate.replace(/\//g, "-");
     }
-    fetch(`/api/beacon/${policy.cusip}/${formattedDate}`)
-      .then((res) => res.ok ? res.json() : null)
+    setIsLoading(true);
+    getApiResponse(policy.cusip, formattedDate)
       .then((data) => setApiResponse(data))
-      .catch(() => setApiResponse(null));
-  }, [policy.cusip, policy.policyDate]);
+      .catch((err) => {
+        console.error("Error fetching beacon data:", err);
+        setApiResponse(null);
+      })
+      .finally(() => setIsLoading(false));
+  }, [policy?.cusip, policy?.policyDate]);
 
-  const sectionRefs = useRef<Record<Tab, HTMLElement | null>>({
-    Chart: null,
-    "Income Table": null,
-    "Post Activation": null,
-    "Tax Implications": null,
-    "Watch Items": null,
-    "Full View": null,
-    "Annuity Benefits": null,
-  });
+  const handleSidebarChange = useCallback((sidebar: React.ReactNode | null) => {
+    setAnnuitySidebar((prev) => (prev === sidebar ? prev : sidebar));
+  }, []);
+
+  const handleChartDataChange = useCallback((data: unknown[]) => {
+    setChartData(data);
+  }, []);
+
+  // All hooks are declared above — safe to bail out here
+  if (!policy) return null;
 
   const sectionId = (tab: Tab) => `details-section-${tab.toLowerCase().replace(/\s+/g, "-")}`;
 
   const handleTabClick = (tab: Tab) => {
     setActiveTab(tab);
-
     const section = sectionRefs.current[tab];
     if (section) {
       section.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -86,23 +99,11 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
 
   const tabContent: Record<Tab, React.ReactNode> = {
     Chart: <ChartTab policy={policy} sidebar={annuitySidebar} chartData={chartData} />,
-    "Income Table": <IncomeTableTab policy={policy} />,
-    "Post Activation": <PostActivationTab policy={policy} />,
-    "Tax Implications": <TaxImplicationsTab policy={policy} />,
     "Watch Items": <WatchItemsTab />,
     "Full View": <FullViewTab policy={policy} />,
-    "Annuity Benefits": (
-      <AnnuityBenefitsTab
-        beaconData={apiResponse?.beaconReport}
-        policy={policy}
-        sidebarPlacement="external"
-        onSidebarChange={handleSidebarChange}
-        onChartDataChange={handleChartDataChange}
-      />
-    ),
   };
 
-  const renderedSections = tabs.map((tab) => (
+  const renderedSections = TABS.map((tab) => (
     <section
       key={tab}
       id={sectionId(tab)}
@@ -113,8 +114,6 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
       {tabContent[tab]}
     </section>
   ));
-
-  // Keep the sidebar node cached even when other tabs are active; we hide it via layout conditions.
 
   return (
     <aside
@@ -140,6 +139,16 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
             </button>
           </div>
         </div>
+
+        {isLoading && (
+          <div className="absolute inset-0 top-14 z-20 flex flex-col items-center justify-center gap-4 bg-white/90 backdrop-blur-sm">
+            <div className="w-8 h-8 rounded-full border-2 border-gray-200 border-t-blue-600 animate-spin" />
+            <div className="text-center">
+              <p className="text-[11px] font-semibold text-gray-700">Loading policy data</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">Fetching report and generating analysis…</p>
+            </div>
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-[1200px] mx-auto px-4 py-4 space-y-6">
@@ -190,7 +199,7 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
 
             <div className="sticky top-0 z-10 -mx-4 px-4 bg-white border-b pb-2 pt-2">
               <div className="inline-flex text-[11px] font-semibold text-gray-600 border border-gray-200">
-                {tabs.map((tab, i) => (
+                {TABS.map((tab, i) => (
                   <button
                     key={tab}
                     onClick={() => handleTabClick(tab)}
@@ -207,7 +216,19 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
               </div>
             </div>
 
-            <div className="space-y-8 pb-6">{renderedSections}</div>
+            <div className="space-y-8 pb-6">
+              {renderedSections}
+              {/* Hidden — keeps AnnuityBenefitsViz mounted so it drives chart data and sidebar */}
+              <div className="hidden">
+                <AnnuityBenefitsTab
+                  beaconData={apiResponse?.beaconReport}
+                  policy={policy}
+                  sidebarPlacement="external"
+                  onSidebarChange={handleSidebarChange}
+                  onChartDataChange={handleChartDataChange}
+                />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -223,4 +244,3 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
     </aside>
   );
 };
-
