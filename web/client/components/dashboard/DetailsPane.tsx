@@ -12,6 +12,7 @@ import { TaxImplicationsTab } from "@/components/dashboard/tabs/TaxImplicationsT
 import { WatchItemsTab } from "@/components/dashboard/tabs/WatchItemsTab";
 import { FullViewTab } from "@/components/dashboard/tabs/FullViewTab";
 import { AnnuityBenefitsTab } from "@/components/dashboard/tabs/AnnuityBenefitsTab";
+import { getApiResponse } from "@shared/data-provider";
 
 interface Props {
   policy: InsurancePolicy | null;
@@ -71,6 +72,12 @@ export const DetailsPane: React.FC<Props> = ({ policy, isOpen, onClose }) => {
       .then((data) => setApiResponse(data))
       .catch(() => setApiResponse(null))
       .finally(() => setIsLoading(false));
+    getApiResponse(policy.cusip, formattedDate)
+      .then((data) => setApiResponse(data))
+      .catch((err) => {
+        console.error("Error fetching beacon data:", err);
+        setApiResponse(null);
+      })
   }, [policy?.cusip, policy?.policyDate]);
 
   const handleSidebarChange = useCallback((sidebar: React.ReactNode | null) => {
